@@ -61,7 +61,13 @@ class UserSyncControllerTest {
 
     @Test
     void shouldCreateUser() {
-        CreateUserRequest request = new CreateUserRequest("new@avira.com", "StrongPass123", "0987654321");
+        CreateUserRequest request = new CreateUserRequest(
+                "new@avira.com",
+                "StrongPass123",
+                "0987654321",
+                "New",
+                "User"
+        );
         UserResponse created = UserResponse.builder()
                 .id(UUID.randomUUID())
                 .email("new@avira.com")

@@ -54,7 +54,13 @@ class UserSyncServiceTest {
 
     @Test
     void shouldCreateUserAndProfileAndSyncToKeycloak() {
-        CreateUserRequest request = new CreateUserRequest("alice@avira.com", "StrongPass123", "0123456789");
+        CreateUserRequest request = new CreateUserRequest(
+                "alice@avira.com",
+                "StrongPass123",
+                "0123456789",
+                "Alice",
+                "Smith"
+        );
 
         when(userRepository.existsByEmail("alice@avira.com")).thenReturn(false);
         when(passwordEncoder.encode("StrongPass123")).thenReturn("encoded-password");
