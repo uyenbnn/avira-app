@@ -7,15 +7,17 @@ import org.springframework.stereotype.Repository;
 
 import java.util.List;
 import java.util.Optional;
-import java.util.UUID;
 
 @Repository
-public interface UserAuthProviderRepository extends JpaRepository<UserAuthProvider, UUID> {
+public interface UserAuthProviderRepository extends JpaRepository<UserAuthProvider, String> {
 
-    List<UserAuthProvider> findAllByUserId(UUID userId);
+    List<UserAuthProvider> findAllByUserId(String userId);
+
+    Optional<UserAuthProvider> findFirstByUserIdAndProvider(String userId, AuthProvider provider);
 
     Optional<UserAuthProvider> findByProviderAndProviderUserId(AuthProvider provider, String providerUserId);
 
     Optional<UserAuthProvider> findByProviderAndEmail(AuthProvider provider, String email);
-}
 
+    long deleteByUserId(String userId);
+}

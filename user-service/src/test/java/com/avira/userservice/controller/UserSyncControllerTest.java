@@ -17,7 +17,6 @@ import org.springframework.http.ResponseEntity;
 
 import java.time.Instant;
 import java.util.List;
-import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.verify;
@@ -34,7 +33,7 @@ class UserSyncControllerTest {
 
     @Test
     void shouldReturnUserPage() {
-        UUID userId = UUID.randomUUID();
+        String userId = "domain-user-1";
         UserResponse user = UserResponse.builder()
                 .id(userId)
                 .email("alice@avira.com")
@@ -55,7 +54,7 @@ class UserSyncControllerTest {
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(response.getBody()).isNotNull();
         assertThat(response.getBody().getContent()).hasSize(1);
-        assertThat(response.getBody().getContent().get(0).email()).isEqualTo("alice@avira.com");
+        assertThat(response.getBody().getContent().getFirst().email()).isEqualTo("alice@avira.com");
         verify(userService).findAll(pageRequest);
     }
 
@@ -69,7 +68,7 @@ class UserSyncControllerTest {
                 "User"
         );
         UserResponse created = UserResponse.builder()
-                .id(UUID.randomUUID())
+                .id("domain-user-2")
                 .email("new@avira.com")
                 .phone("0987654321")
                 .status(UserStatus.ACTIVE)

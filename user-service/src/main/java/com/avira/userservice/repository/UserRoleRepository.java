@@ -5,18 +5,14 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
-import java.util.UUID;
 
 @Repository
-public interface UserRoleRepository extends JpaRepository<UserRole, UUID> {
+public interface UserRoleRepository extends JpaRepository<UserRole, String> {
 
-    List<UserRole> findAllByUserId(UUID userId);
+    List<UserRole> findAllByUserId(String userId);
 
-    boolean existsByUserIdAndRoleName(UUID userId, String roleName);
+    boolean existsByUserIdAndRoleName(String userId, String roleName);
 
     @org.springframework.transaction.annotation.Transactional
-    void deleteByUserIdAndRoleName(UUID userId, String roleName);
+    void deleteByUserIdAndRoleName(String userId, String roleName);
 }
-
-
-

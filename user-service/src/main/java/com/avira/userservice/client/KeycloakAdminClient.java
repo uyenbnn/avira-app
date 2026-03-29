@@ -101,6 +101,13 @@ public class KeycloakAdminClient {
         log.info("Removed role {} from Keycloak user {}", roleName, keycloakId);
     }
 
+    public void setUserEnabled(String keycloakId, boolean enabled) {
+        UserRepresentation user = realm().users().get(keycloakId).toRepresentation();
+        user.setEnabled(enabled);
+        realm().users().get(keycloakId).update(user);
+        log.info("Updated Keycloak user status keycloakId={} enabled={}", keycloakId, enabled);
+    }
+
     public void setUserEnabledByEmail(String email, boolean enabled) {
         Optional<UserRepresentation> userOpt = findByEmail(email);
         if (userOpt.isEmpty()) {

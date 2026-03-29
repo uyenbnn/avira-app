@@ -9,10 +9,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.UUID;
-
 @RestController
-@RequestMapping("/api/v1/users/{userId}/profile")
+@RequestMapping("/users/{userId}/profile")
 @RequiredArgsConstructor
 public class UserProfileController {
 
@@ -20,18 +18,17 @@ public class UserProfileController {
 
     // GET /api/v1/users/{userId}/profile
     @GetMapping
-    @PreAuthorize("hasRole('ADMIN') or authentication.name == #userId.toString()")
-    public ResponseEntity<UserProfileResponse> findByUserId(@PathVariable UUID userId) {
+    @PreAuthorize("hasRole('ADMIN') or @userAuthorization.canAccessUser(authentication, #userId)")
+    public ResponseEntity<UserProfileResponse> findByUserId(@PathVariable String userId) {
         return ResponseEntity.ok(userProfileService.findByUserId(userId));
     }
 
     // PUT /api/v1/users/{userId}/profile
     @PutMapping
-    @PreAuthorize("hasRole('ADMIN') or authentication.name == #userId.toString()")
+    @PreAuthorize("hasRole('ADMIN') or @userAuthorization.canAccessUser(authentication, #userId)")
     public ResponseEntity<UserProfileResponse> update(
-            @PathVariable UUID userId,
+            @PathVariable String userId,
             @Valid @RequestBody UpdateUserProfileRequest request) {
         return ResponseEntity.ok(userProfileService.update(userId, request));
     }
 }
-

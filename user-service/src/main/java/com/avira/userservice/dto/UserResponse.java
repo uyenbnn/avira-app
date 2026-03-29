@@ -4,11 +4,10 @@ import com.avira.userservice.enums.UserStatus;
 import lombok.Builder;
 
 import java.time.Instant;
-import java.util.UUID;
 
 @Builder
 public record UserResponse(
-        UUID id,
+        String id,
         String email,
         String phone,
         UserStatus status,
