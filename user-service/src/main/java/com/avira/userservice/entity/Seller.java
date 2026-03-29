@@ -4,7 +4,6 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.Instant;
-import java.util.UUID;
 
 @Getter
 @Setter
@@ -21,8 +20,8 @@ import java.util.UUID;
 public class Seller {
 
     @Id
-    @Column(name = "user_id", updatable = false, nullable = false)
-    private UUID userId;
+    @Column(name = "user_id", updatable = false, nullable = false, length = 64)
+    private String userId;
 
     @OneToOne(fetch = FetchType.LAZY)
     @MapsId
@@ -46,4 +45,3 @@ public class Seller {
         this.createdAt = Instant.now();
     }
 }
-

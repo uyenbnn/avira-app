@@ -5,24 +5,22 @@ import com.avira.userservice.constants.RoleConstants;
 import com.avira.userservice.dto.CreateUserRequest;
 import com.avira.userservice.dto.UpdateUserRequest;
 import com.avira.userservice.dto.UserResponse;
-import com.avira.userservice.entity.Role;
 import com.avira.userservice.entity.User;
+import com.avira.userservice.entity.UserAuthProvider;
 import com.avira.userservice.entity.UserProfile;
-import com.avira.userservice.entity.UserRole;
+import com.avira.userservice.enums.AuthProvider;
 import com.avira.userservice.enums.UserStatus;
-import com.avira.userservice.repository.RoleRepository;
+import com.avira.userservice.repository.UserAuthProviderRepository;
 import com.avira.userservice.repository.UserProfileRepository;
 import com.avira.userservice.repository.UserRepository;
-import com.avira.userservice.repository.UserRoleRepository;
+import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.keycloak.representations.idm.UserRepresentation;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.util.UUID;
 
 @Slf4j
 @Service
@@ -32,10 +30,8 @@ public class UserService {
 
     private final UserRepository userRepository;
     private final UserProfileRepository userProfileRepository;
-    private final RoleRepository roleRepository;
-    private final UserRoleRepository userRoleRepository;
+    private final UserAuthProviderRepository userAuthProviderRepository;
     private final KeycloakAdminClient keycloakAdminClient;
-    private final PasswordEncoder passwordEncoder;
 
     // ------------------------------------------------------------------ //
     //  Queries
@@ -45,15 +41,8 @@ public class UserService {
         return userRepository.findAll(pageable).map(this::toResponse);
     }
 
-    public UserResponse findById(UUID id) {
+    public UserResponse findById(String id) {
         return toResponse(getOrThrow(id));
-    }
-
-    public UserResponse findByEmail(String email) {
-        return userRepository.findByEmail(email)
-                .map(this::toResponse)
-                .orElseThrow(() -> new jakarta.persistence.EntityNotFoundException(
-                        "User not found with email: " + email));
     }
 
     // ------------------------------------------------------------------ //
@@ -62,123 +51,124 @@ public class UserService {
 
     @Transactional
     public UserResponse create(CreateUserRequest request) {
-        if (userRepository.existsByEmail(request.email())) {
-            throw new IllegalArgumentException("Email already registered: " + request.email());
-        }
+        String keycloakId = keycloakAdminClient.createUser(
+                        request.email(),
+                        request.firstName(),
+                        request.lastName(),
+                        request.password(),
+                        false)
+                .orElseThrow(() -> new IllegalStateException(
+                        "Failed to create Keycloak identity for email: " + request.email()));
 
-        User user = User.builder()
-                .email(request.email())
-                .password(passwordEncoder.encode(request.password()))
-                .phone(request.phone())
-                .status(UserStatus.ACTIVE)
-                .emailVerified(false)
-                .build();
-
-        user = userRepository.save(user);
-
-        // Create an empty profile linked to the user
-        UserProfile profile = UserProfile.builder().user(user).build();
-        userProfileRepository.save(profile);
-
-        // Ensure base roles exist and assign USER as default role for new registrations.
-        ensureBaseRoles();
-        Role userRole = roleRepository.findById(RoleConstants.USER)
-                .orElseThrow(() -> new IllegalStateException("Role USER is missing after initialization"));
-        userRoleRepository.save(UserRole.builder()
-                .user(user)
-                .role(userRole)
-                .build());
-
-        // Mirror to Keycloak (best-effort — don't fail the transaction)
         try {
-            var keycloakUserId = keycloakAdminClient.createUser(
-                    user.getEmail(), request.firstName(), request.lastName(),
-                    request.password(), false);
-            keycloakUserId.ifPresent(id -> keycloakAdminClient.assignRole(id, RoleConstants.USER));
-        } catch (Exception e) {
-            log.warn("Keycloak sync failed for new user {}: {}", user.getEmail(), e.getMessage());
-        }
+            User user = userRepository.save(User.builder()
+                    .phone(request.phone())
+                    .status(UserStatus.ACTIVE)
+                    .build());
 
-        log.info("Created user id={} email={}", user.getId(), user.getEmail());
-        return toResponse(user);
+            userProfileRepository.save(UserProfile.builder()
+                    .user(user)
+                    .firstName(request.firstName())
+                    .lastName(request.lastName())
+                    .build());
+
+            UserAuthProvider authProvider = userAuthProviderRepository.save(UserAuthProvider.builder()
+                    .user(user)
+                    .provider(AuthProvider.LOCAL)
+                    .providerUserId(keycloakId)
+                    .email(request.email())
+                    .build());
+
+            keycloakAdminClient.assignRole(keycloakId, RoleConstants.USER);
+
+            log.info("Created domain user id={} linkedToProvider={} providerUserId={}",
+                    user.getId(), authProvider.getProvider(), authProvider.getProviderUserId());
+            return toResponse(user, authProvider);
+        } catch (RuntimeException e) {
+            try {
+                keycloakAdminClient.deleteUser(keycloakId);
+            } catch (Exception cleanupError) {
+                log.error("Failed to rollback Keycloak identity {} after local create error: {}",
+                        keycloakId, cleanupError.getMessage());
+            }
+            throw e;
+        }
     }
 
     @Transactional
-    public UserResponse update(UUID id, UpdateUserRequest request) {
+    public UserResponse update(String id, UpdateUserRequest request) {
         User user = getOrThrow(id);
 
-        if (request.email() != null && !request.email().equals(user.getEmail())) {
-            if (userRepository.existsByEmail(request.email())) {
-                throw new IllegalArgumentException("Email already taken: " + request.email());
-            }
-            user.setEmail(request.email());
-        }
         if (request.phone() != null) {
             user.setPhone(request.phone());
         }
 
         user = userRepository.save(user);
-        log.info("Updated user id={}", id);
+        log.info("Updated domain user id={}", id);
         return toResponse(user);
     }
 
     @Transactional
-    public void changeStatus(UUID id, UserStatus status) {
+    public void changeStatus(String id, UserStatus status) {
         User user = getOrThrow(id);
         user.setStatus(status);
         userRepository.save(user);
 
-        // Mirror status to Keycloak: ACTIVE -> enabled, otherwise disabled.
-        try {
-            boolean enabled = status == UserStatus.ACTIVE;
-            keycloakAdminClient.setUserEnabledByEmail(user.getEmail(), enabled);
-        } catch (Exception e) {
-            log.warn("Keycloak status sync failed for user {}: {}", user.getEmail(), e.getMessage());
-        }
+        boolean enabled = status == UserStatus.ACTIVE;
+        findLocalAuthProvider(id)
+                .ifPresentOrElse(
+                        authProvider -> keycloakAdminClient.setUserEnabled(authProvider.getProviderUserId(), enabled),
+                        () -> log.warn("No linked identity provider found for domain user id={} while changing status", id)
+                );
 
-        log.info("Changed status of user id={} to {}", id, status);
+        log.info("Changed status of domain user id={} to {}", id, status);
     }
 
     @Transactional
-    public void delete(UUID id) {
+    public void delete(String id) {
         User user = getOrThrow(id);
+
+        findLocalAuthProvider(id)
+                .ifPresent(authProvider -> keycloakAdminClient.deleteUser(authProvider.getProviderUserId()));
+
+        userAuthProviderRepository.deleteByUserId(id);
+        userProfileRepository.deleteById(id);
         userRepository.delete(user);
-        log.info("Deleted user id={}", id);
+        log.info("Deleted domain user id={}", id);
     }
 
     // ------------------------------------------------------------------ //
     //  Helpers
     // ------------------------------------------------------------------ //
 
-    private User getOrThrow(UUID id) {
+    private User getOrThrow(String id) {
         return userRepository.findById(id)
-                .orElseThrow(() -> new jakarta.persistence.EntityNotFoundException(
-                        "User not found: " + id));
+                .orElseThrow(() -> new EntityNotFoundException("User not found: " + id));
     }
 
-    private void ensureBaseRoles() {
-        for (String roleName : RoleConstants.BASE_ROLES) {
-            ensureRoleExists(roleName);
+    private UserResponse toResponse(User user) {
+        return toResponse(user, findLocalAuthProvider(user.getId()).orElse(null));
+    }
+
+    private UserResponse toResponse(User user, UserAuthProvider authProvider) {
+        UserRepresentation identity = null;
+        if (authProvider != null && authProvider.getProviderUserId() != null && !authProvider.getProviderUserId().isBlank()) {
+            identity = keycloakAdminClient.findById(authProvider.getProviderUserId()).orElse(null);
         }
-    }
 
-    private void ensureRoleExists(String roleName) {
-        if (roleRepository.existsById(roleName)) {
-            return;
-        }
-        roleRepository.save(Role.builder().name(roleName).build());
-    }
-
-    private UserResponse toResponse(User u) {
         return UserResponse.builder()
-                .id(u.getId())
-                .email(u.getEmail())
-                .phone(u.getPhone())
-                .status(u.getStatus())
-                .emailVerified(u.isEmailVerified())
-                .createdAt(u.getCreatedAt())
-                .updatedAt(u.getUpdatedAt())
-                .lastLoginAt(u.getLastLoginAt())
+                .id(user.getId())
+                .email(identity != null ? identity.getEmail() : authProvider != null ? authProvider.getEmail() : null)
+                .phone(user.getPhone())
+                .status(user.getStatus())
+                .emailVerified(identity != null && Boolean.TRUE.equals(identity.isEmailVerified()))
+                .createdAt(user.getCreatedAt())
+                .updatedAt(user.getUpdatedAt())
+                .lastLoginAt(user.getLastLoginAt())
                 .build();
+    }
+
+    private java.util.Optional<UserAuthProvider> findLocalAuthProvider(String userId) {
+        return userAuthProviderRepository.findFirstByUserIdAndProvider(userId, AuthProvider.LOCAL);
     }
 }

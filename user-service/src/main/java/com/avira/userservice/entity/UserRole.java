@@ -20,9 +20,8 @@ import java.util.UUID;
 public class UserRole {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
-    @Column(name = "id", updatable = false, nullable = false)
-    private UUID id;
+    @Column(name = "id", updatable = false, nullable = false, length = 64)
+    private String id;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "user_id", nullable = false)
@@ -31,5 +30,11 @@ public class UserRole {
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "role_name", nullable = false)
     private Role role;
-}
 
+    @PrePersist
+    protected void ensureId() {
+        if (this.id == null || this.id.isBlank()) {
+            this.id = UUID.randomUUID().toString();
+        }
+    }
+}

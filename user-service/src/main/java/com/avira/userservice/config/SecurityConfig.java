@@ -1,5 +1,6 @@
 package com.avira.userservice.config;
 
+import com.avira.commonlib.constants.UserApiPaths;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -32,8 +33,7 @@ public class SecurityConfig {
                     session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
                     .requestMatchers(HttpMethod.GET, "/actuator/health").permitAll()
-                    .requestMatchers(HttpMethod.POST, "/api/v1/auth/register").permitAll()
-                    .requestMatchers(HttpMethod.POST, "/api/v1/auth/login").permitAll()
+                    .requestMatchers(HttpMethod.POST, UserApiPaths.USERS_BASE).permitAll()
                     .requestMatchers("/api/v1/users/sync/**").hasRole("ADMIN")
                     .anyRequest().authenticated()
             )

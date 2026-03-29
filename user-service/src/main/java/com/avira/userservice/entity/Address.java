@@ -20,9 +20,8 @@ import java.util.UUID;
 public class Address {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
-    @Column(name = "id", updatable = false, nullable = false)
-    private UUID id;
+    @Column(name = "id", updatable = false, nullable = false, length = 64)
+    private String id;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "user_id", nullable = false)
@@ -48,5 +47,11 @@ public class Address {
 
     @Column(name = "is_default", nullable = false)
     private boolean isDefault;
-}
 
+    @PrePersist
+    protected void ensureId() {
+        if (this.id == null || this.id.isBlank()) {
+            this.id = UUID.randomUUID().toString();
+        }
+    }
+}

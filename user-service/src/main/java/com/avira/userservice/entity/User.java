@@ -13,24 +13,12 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
-@Table(
-        name = "users",
-        indexes = {
-                @Index(name = "idx_users_email", columnList = "email")
-        }
-)
+@Table(name = "users")
 public class User {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
-    @Column(name = "id", updatable = false, nullable = false)
-    private UUID id;
-
-    @Column(name = "email", nullable = false, unique = true, length = 255)
-    private String email;
-
-    @Column(name = "password")
-    private String password;
+    @Column(name = "id", updatable = false, nullable = false, length = 64)
+    private String id;
 
     @Column(name = "phone", length = 20)
     private String phone;
@@ -38,9 +26,6 @@ public class User {
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 20)
     private UserStatus status;
-
-    @Column(name = "email_verified", nullable = false)
-    private boolean emailVerified;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
@@ -53,6 +38,9 @@ public class User {
 
     @PrePersist
     protected void onCreate() {
+        if (this.id == null || this.id.isBlank()) {
+            this.id = UUID.randomUUID().toString();
+        }
         Instant now = Instant.now();
         this.createdAt = now;
         this.updatedAt = now;
@@ -66,4 +54,3 @@ public class User {
         this.updatedAt = Instant.now();
     }
 }
-

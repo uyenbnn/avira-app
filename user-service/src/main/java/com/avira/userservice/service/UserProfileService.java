@@ -10,8 +10,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.UUID;
-
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -20,13 +18,13 @@ public class UserProfileService {
 
     private final UserProfileRepository userProfileRepository;
 
-    public UserProfileResponse findByUserId(UUID userId) {
+    public UserProfileResponse findByUserId(String userId) {
         UserProfile profile = getOrThrow(userId);
         return toResponse(profile);
     }
 
     @Transactional
-    public UserProfileResponse update(UUID userId, UpdateUserProfileRequest request) {
+    public UserProfileResponse update(String userId, UpdateUserProfileRequest request) {
         UserProfile profile = getOrThrow(userId);
 
         if (request.firstName() != null) profile.setFirstName(request.firstName());
@@ -44,7 +42,7 @@ public class UserProfileService {
     //  Helpers
     // ------------------------------------------------------------------ //
 
-    private UserProfile getOrThrow(UUID userId) {
+    private UserProfile getOrThrow(String userId) {
         return userProfileRepository.findByUserId(userId)
                 .orElseThrow(() -> new EntityNotFoundException(
                         "User profile not found for userId: " + userId));
@@ -61,4 +59,3 @@ public class UserProfileService {
                 .build();
     }
 }
-

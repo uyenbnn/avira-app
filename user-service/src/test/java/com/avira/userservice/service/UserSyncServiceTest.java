@@ -4,23 +4,21 @@ import com.avira.userservice.client.KeycloakAdminClient;
 import com.avira.userservice.constants.RoleConstants;
 import com.avira.userservice.dto.CreateUserRequest;
 import com.avira.userservice.dto.UserResponse;
-import com.avira.userservice.entity.Role;
 import com.avira.userservice.entity.User;
+import com.avira.userservice.entity.UserAuthProvider;
 import com.avira.userservice.entity.UserProfile;
-import com.avira.userservice.entity.UserRole;
-import com.avira.userservice.repository.RoleRepository;
+import com.avira.userservice.enums.AuthProvider;
+import com.avira.userservice.repository.UserAuthProviderRepository;
 import com.avira.userservice.repository.UserProfileRepository;
 import com.avira.userservice.repository.UserRepository;
-import com.avira.userservice.repository.UserRoleRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.keycloak.representations.idm.UserRepresentation;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.util.Optional;
-import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -38,22 +36,16 @@ class UserSyncServiceTest {
     private UserProfileRepository userProfileRepository;
 
     @Mock
-    private RoleRepository roleRepository;
-
-    @Mock
-    private UserRoleRepository userRoleRepository;
+    private UserAuthProviderRepository userAuthProviderRepository;
 
     @Mock
     private KeycloakAdminClient keycloakAdminClient;
-
-    @Mock
-    private PasswordEncoder passwordEncoder;
 
     @InjectMocks
     private UserService userService;
 
     @Test
-    void shouldCreateUserAndProfileAndSyncToKeycloak() {
+    void shouldCreateDomainUserProfileAndKeycloakIdentity() {
         CreateUserRequest request = new CreateUserRequest(
                 "alice@avira.com",
                 "StrongPass123",
@@ -61,39 +53,56 @@ class UserSyncServiceTest {
                 "Alice",
                 "Smith"
         );
+        UserRepresentation identity = new UserRepresentation();
+        identity.setId("kc-user-id");
+        identity.setEmail("alice@avira.com");
+        identity.setEmailVerified(false);
 
-        when(userRepository.existsByEmail("alice@avira.com")).thenReturn(false);
-        when(passwordEncoder.encode("StrongPass123")).thenReturn("encoded-password");
+        when(keycloakAdminClient.createUser(eq("alice@avira.com"), eq("Alice"), eq("Smith"), eq("StrongPass123"), eq(false)))
+                .thenReturn(Optional.of("kc-user-id"));
         when(userRepository.save(any(User.class))).thenAnswer(invocation -> {
             User saved = invocation.getArgument(0);
-            saved.setId(UUID.randomUUID());
+            saved.setId("domain-user-1");
             return saved;
         });
         when(userProfileRepository.save(any(UserProfile.class))).thenAnswer(invocation -> invocation.getArgument(0));
-        when(roleRepository.existsById(any(String.class))).thenReturn(false);
-        when(roleRepository.findById("USER")).thenReturn(Optional.of(Role.builder().name("USER").build()));
-        when(userRoleRepository.save(any(UserRole.class))).thenAnswer(invocation -> invocation.getArgument(0));
-        when(keycloakAdminClient.createUser(eq("alice@avira.com"), eq(null), eq(null), eq("StrongPass123"), eq(false)))
-                .thenReturn(Optional.of("kc-user-id"));
+        when(userAuthProviderRepository.save(any(UserAuthProvider.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(keycloakAdminClient.findById("kc-user-id")).thenReturn(Optional.of(identity));
 
         UserResponse result = userService.create(request);
 
         assertThat(result).isNotNull();
+        assertThat(result.id()).isEqualTo("domain-user-1");
         assertThat(result.email()).isEqualTo("alice@avira.com");
         assertThat(result.phone()).isEqualTo("0123456789");
-        assertThat(result.id()).isNotNull();
 
-        verify(userRepository).existsByEmail("alice@avira.com");
-        verify(passwordEncoder).encode("StrongPass123");
+        verify(keycloakAdminClient).createUser("alice@avira.com", "Alice", "Smith", "StrongPass123", false);
         verify(userRepository).save(any(User.class));
         verify(userProfileRepository).save(any(UserProfile.class));
-        verify(roleRepository).existsById("USER");
-        verify(roleRepository).existsById("ADMIN");
-        verify(roleRepository).existsById("SELLER");
-        verify(roleRepository).existsById("BUYER");
-        verify(roleRepository).findById("USER");
-        verify(userRoleRepository).save(any(UserRole.class));
-        verify(keycloakAdminClient).createUser("alice@avira.com", null, null, "StrongPass123", false);
+        verify(userAuthProviderRepository).save(any(UserAuthProvider.class));
         verify(keycloakAdminClient).assignRole("kc-user-id", RoleConstants.USER);
+        verify(keycloakAdminClient).findById("kc-user-id");
+    }
+
+    @Test
+    void shouldMirrorStatusChangesToLinkedIdentityProvider() {
+        User user = User.builder()
+                .id("domain-user-1")
+                .build();
+        UserAuthProvider authProvider = UserAuthProvider.builder()
+                .user(user)
+                .provider(AuthProvider.LOCAL)
+                .providerUserId("kc-user-id")
+                .email("alice@avira.com")
+                .build();
+
+        when(userRepository.findById("domain-user-1")).thenReturn(Optional.of(user));
+        when(userRepository.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(userAuthProviderRepository.findFirstByUserIdAndProvider("domain-user-1", AuthProvider.LOCAL))
+                .thenReturn(Optional.of(authProvider));
+
+        userService.changeStatus("domain-user-1", com.avira.userservice.enums.UserStatus.DISABLED);
+
+        verify(keycloakAdminClient).setUserEnabled("kc-user-id", false);
     }
 }

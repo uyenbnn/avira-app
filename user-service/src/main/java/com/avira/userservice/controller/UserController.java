@@ -15,10 +15,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.UUID;
-
 @RestController
-@RequestMapping("/api/v1/users")
+@RequestMapping("/users")
 @RequiredArgsConstructor
 public class UserController {
 
@@ -34,8 +32,8 @@ public class UserController {
 
     // GET /api/v1/users/{id}
     @GetMapping("/{id}")
-//    @PreAuthorize("hasRole('ADMIN') or authentication.name == #id.toString()")
-    public ResponseEntity<UserResponse> findById(@PathVariable UUID id) {
+//    @PreAuthorize("hasRole('ADMIN') or @userAuthorization.canAccessUser(authentication, #id)")
+    public ResponseEntity<UserResponse> findById(@PathVariable String id) {
         return ResponseEntity.ok(userService.findById(id));
     }
 
@@ -49,9 +47,9 @@ public class UserController {
 
     // PUT /api/v1/users/{id}
     @PutMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN') or authentication.name == #id.toString()")
+    @PreAuthorize("hasRole('ADMIN') or @userAuthorization.canAccessUser(authentication, #id)")
     public ResponseEntity<UserResponse> update(
-            @PathVariable UUID id,
+            @PathVariable String id,
             @Valid @RequestBody UpdateUserRequest request) {
         return ResponseEntity.ok(userService.update(id, request));
     }
@@ -60,7 +58,7 @@ public class UserController {
     @PatchMapping("/{id}/status")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Void> changeStatus(
-            @PathVariable UUID id,
+            @PathVariable String id,
             @RequestParam UserStatus status) {
         userService.changeStatus(id, status);
         return ResponseEntity.noContent().build();
@@ -69,9 +67,8 @@ public class UserController {
     // DELETE /api/v1/users/{id}
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<Void> delete(@PathVariable UUID id) {
+    public ResponseEntity<Void> delete(@PathVariable String id) {
         userService.delete(id);
         return ResponseEntity.noContent().build();
     }
 }
-

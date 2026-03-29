@@ -1,12 +1,18 @@
 package com.avira.userservice.service;
 
+import com.avira.userservice.constants.RoleConstants;
 import jakarta.ws.rs.WebApplicationException;
 import jakarta.ws.rs.core.Response;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.keycloak.admin.client.Keycloak;
+import org.keycloak.admin.client.resource.ClientsResource;
+import org.keycloak.admin.client.resource.RealmResource;
 import org.keycloak.admin.client.resource.RealmsResource;
+import org.keycloak.admin.client.resource.RolesResource;
+import org.keycloak.representations.idm.ClientRepresentation;
 import org.keycloak.representations.idm.RealmRepresentation;
+import org.keycloak.representations.idm.RoleRepresentation;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.boot.ApplicationArguments;
@@ -18,6 +24,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -32,12 +39,21 @@ class KeycloakRealmBootstrapServiceTest {
     private RealmsResource realmsResource;
 
     @Mock
+    private RealmResource realmResource;
+
+    @Mock
+    private RolesResource rolesResource;
+
+    @Mock
+    private ClientsResource clientsResource;
+
+    @Mock
     private ApplicationArguments args;
 
     @Test
     void shouldIncludeHttp401DetailsInFailFastException() {
         KeycloakRealmBootstrapService service = new KeycloakRealmBootstrapService(keycloak);
-        setProps(service, true, true);
+        setProps(service, true);
 
         Response unauthorized = Response.status(401)
                 .entity("{\"error\":\"unauthorized\"}")
@@ -57,7 +73,7 @@ class KeycloakRealmBootstrapServiceTest {
     @Test
     void shouldNotThrowWhenFailFastDisabled() {
         KeycloakRealmBootstrapService service = new KeycloakRealmBootstrapService(keycloak);
-        setProps(service, true, false);
+        setProps(service, false);
 
         when(keycloak.realms()).thenReturn(realmsResource);
         when(realmsResource.findAll()).thenThrow(new RuntimeException("network down"));
@@ -68,13 +84,22 @@ class KeycloakRealmBootstrapServiceTest {
     @Test
     void shouldSkipCreateWhenRealmAlreadyExists() {
         KeycloakRealmBootstrapService service = new KeycloakRealmBootstrapService(keycloak);
-        setProps(service, true, true);
+        setProps(service, true);
 
         RealmRepresentation existing = new RealmRepresentation();
         existing.setRealm("avira");
 
         when(keycloak.realms()).thenReturn(realmsResource);
         when(realmsResource.findAll()).thenReturn(List.of(existing));
+        when(keycloak.realm("avira")).thenReturn(realmResource);
+        when(realmResource.roles()).thenReturn(rolesResource);
+        when(realmResource.clients()).thenReturn(clientsResource);
+        when(rolesResource.list()).thenReturn(RoleConstants.BASE_ROLES.stream().map(roleName -> {
+            RoleRepresentation role = new RoleRepresentation();
+            role.setName(roleName);
+            return role;
+        }).toList());
+        when(clientsResource.findByClientId(anyString())).thenReturn(List.of(new ClientRepresentation()));
 
         service.run(args);
 
@@ -82,14 +107,12 @@ class KeycloakRealmBootstrapServiceTest {
     }
 
     private static void setProps(KeycloakRealmBootstrapService service,
-                                 boolean autoCreate,
                                  boolean failFast) {
         ReflectionTestUtils.setField(service, "serverUrl", "http://localhost:8080");
         ReflectionTestUtils.setField(service, "adminRealm", "master");
         ReflectionTestUtils.setField(service, "clientId", "admin-cli");
         ReflectionTestUtils.setField(service, "targetRealm", "avira");
-        ReflectionTestUtils.setField(service, "autoCreateRealm", autoCreate);
+        ReflectionTestUtils.setField(service, "autoCreateRealm", true);
         ReflectionTestUtils.setField(service, "failFast", failFast);
     }
 }
-

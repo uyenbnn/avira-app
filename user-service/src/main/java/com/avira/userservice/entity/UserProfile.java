@@ -4,7 +4,6 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.LocalDate;
-import java.util.UUID;
 
 @Getter
 @Setter
@@ -21,8 +20,8 @@ import java.util.UUID;
 public class UserProfile {
 
     @Id
-    @Column(name = "user_id", updatable = false, nullable = false)
-    private UUID userId;
+    @Column(name = "user_id", updatable = false, nullable = false, length = 64)
+    private String userId;
 
     @OneToOne(fetch = FetchType.LAZY)
     @MapsId
@@ -44,4 +43,3 @@ public class UserProfile {
     @Column(name = "gender", length = 20)
     private String gender;
 }
-
