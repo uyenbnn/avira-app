@@ -1,6 +1,7 @@
 package com.avira.userservice.messaging;
 
 import com.avira.commonlib.constants.EventTopics;
+import com.avira.commonlib.config.properties.ApplicationProperties;
 import com.avira.commonlib.messaging.EventConsumerSupport;
 import com.avira.commonlib.messaging.EventEnvelope;
 import com.avira.commonlib.messaging.MessagingProperties;
@@ -13,7 +14,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.DisposableBean;
 import org.springframework.beans.factory.InitializingBean;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
@@ -29,17 +29,16 @@ public class UserDomainEventStreamListener implements InitializingBean, Disposab
     private final Environment environment;
     private final ObjectMapper objectMapper;
     private final MessagingProperties messagingProperties;
+    private final ApplicationProperties applicationProperties;
     private final EventConsumerSupport eventConsumerSupport;
     private final UserRegisteredEventConsumer userRegisteredEventConsumer;
-
-    @Value("${spring.application.name:user-service}")
-    private String applicationName;
 
     private Consumer consumer;
 
     @Override
     public void afterPropertiesSet() {
         String streamName = messagingProperties.resolveTopicName(EventTopics.USER_DOMAIN);
+        String applicationName = applicationProperties.getName();
         consumer = environment.consumerBuilder()
                 .stream(streamName)
                 .name(applicationName + "-user-domain-consumer")
@@ -62,7 +61,7 @@ public class UserDomainEventStreamListener implements InitializingBean, Disposab
     public void destroy() {
         if (consumer != null) {
             consumer.close();
-            log.info("Stopped RabbitMQ Stream consumer for application '{}'", applicationName);
+            log.info("Stopped RabbitMQ Stream consumer for application '{}'", applicationProperties.getName());
         }
     }
 }

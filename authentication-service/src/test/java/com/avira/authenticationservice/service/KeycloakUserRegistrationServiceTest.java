@@ -2,6 +2,8 @@ package com.avira.authenticationservice.service;
 
 import com.avira.authenticationservice.dto.RegisterRequest;
 import com.avira.authenticationservice.dto.UserResponse;
+import com.avira.commonlib.config.properties.ApplicationProperties;
+import com.avira.commonlib.config.properties.KeycloakAuthProperties;
 import com.avira.commonlib.constants.EventTopics;
 import com.avira.commonlib.constants.UserDomainActions;
 import com.avira.commonlib.messaging.EventPublisher;
@@ -21,7 +23,6 @@ import org.keycloak.representations.idm.RoleRepresentation;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.test.util.ReflectionTestUtils;
 
 import java.net.URI;
 import java.util.List;
@@ -41,6 +42,12 @@ class KeycloakUserRegistrationServiceTest {
 
     @Mock
     private EventPublisher eventPublisher;
+
+    @Mock
+    private KeycloakAuthProperties keycloakAuthProperties;
+
+    @Mock
+    private ApplicationProperties applicationProperties;
 
     @Mock
     private RealmResource realmResource;
@@ -73,8 +80,8 @@ class KeycloakUserRegistrationServiceTest {
         RoleRepresentation userRole = new RoleRepresentation();
         userRole.setName("USER");
 
-        ReflectionTestUtils.setField(keycloakUserRegistrationService, "realm", "avira");
-        ReflectionTestUtils.setField(keycloakUserRegistrationService, "applicationName", "authentication-service");
+        when(keycloakAuthProperties.getRealm()).thenReturn("avira");
+        when(applicationProperties.getName()).thenReturn("authentication-service");
 
         when(keycloak.realm("avira")).thenReturn(realmResource);
         when(realmResource.users()).thenReturn(usersResource);

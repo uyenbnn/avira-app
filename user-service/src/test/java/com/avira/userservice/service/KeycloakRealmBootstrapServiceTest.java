@@ -1,5 +1,6 @@
 package com.avira.userservice.service;
 
+import com.avira.commonlib.config.properties.KeycloakProperties;
 import com.avira.userservice.constants.RoleConstants;
 import jakarta.ws.rs.WebApplicationException;
 import jakarta.ws.rs.core.Response;
@@ -16,7 +17,6 @@ import org.keycloak.representations.idm.RoleRepresentation;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.boot.ApplicationArguments;
-import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.List;
 
@@ -52,8 +52,7 @@ class KeycloakRealmBootstrapServiceTest {
 
     @Test
     void shouldIncludeHttp401DetailsInFailFastException() {
-        KeycloakRealmBootstrapService service = new KeycloakRealmBootstrapService(keycloak);
-        setProps(service, true);
+        KeycloakRealmBootstrapService service = new KeycloakRealmBootstrapService(keycloak, properties(true));
 
         Response unauthorized = Response.status(401)
                 .entity("{\"error\":\"unauthorized\"}")
@@ -72,8 +71,7 @@ class KeycloakRealmBootstrapServiceTest {
 
     @Test
     void shouldNotThrowWhenFailFastDisabled() {
-        KeycloakRealmBootstrapService service = new KeycloakRealmBootstrapService(keycloak);
-        setProps(service, false);
+        KeycloakRealmBootstrapService service = new KeycloakRealmBootstrapService(keycloak, properties(false));
 
         when(keycloak.realms()).thenReturn(realmsResource);
         when(realmsResource.findAll()).thenThrow(new RuntimeException("network down"));
@@ -83,8 +81,7 @@ class KeycloakRealmBootstrapServiceTest {
 
     @Test
     void shouldSkipCreateWhenRealmAlreadyExists() {
-        KeycloakRealmBootstrapService service = new KeycloakRealmBootstrapService(keycloak);
-        setProps(service, true);
+        KeycloakRealmBootstrapService service = new KeycloakRealmBootstrapService(keycloak, properties(true));
 
         RealmRepresentation existing = new RealmRepresentation();
         existing.setRealm("avira");
@@ -106,13 +103,14 @@ class KeycloakRealmBootstrapServiceTest {
         verify(realmsResource, never()).create(any(RealmRepresentation.class));
     }
 
-    private static void setProps(KeycloakRealmBootstrapService service,
-                                 boolean failFast) {
-        ReflectionTestUtils.setField(service, "serverUrl", "http://localhost:8080");
-        ReflectionTestUtils.setField(service, "adminRealm", "master");
-        ReflectionTestUtils.setField(service, "clientId", "admin-cli");
-        ReflectionTestUtils.setField(service, "targetRealm", "avira");
-        ReflectionTestUtils.setField(service, "autoCreateRealm", true);
-        ReflectionTestUtils.setField(service, "failFast", failFast);
+    private static KeycloakProperties properties(boolean failFast) {
+        KeycloakProperties properties = new KeycloakProperties();
+        properties.getSync().setServerUrl("http://localhost:8080");
+        properties.getSync().setClientId("admin-cli");
+        properties.getSync().setRealm("avira");
+        properties.getAdmin().setRealm("master");
+        properties.getRealm().setAutoCreate(true);
+        properties.getRealm().setAutoCreateFailFast(failFast);
+        return properties;
     }
 }

@@ -1,6 +1,7 @@
 package com.avira.authenticationservice.service;
 
 import com.avira.authenticationservice.dto.UserRolesResponse;
+import com.avira.commonlib.config.properties.KeycloakAuthProperties;
 import com.avira.commonlib.constants.UserRoles;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -16,7 +17,6 @@ import org.keycloak.representations.idm.RoleRepresentation;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.List;
 import java.util.Set;
@@ -33,6 +33,7 @@ import static org.mockito.Mockito.when;
 class KeycloakUserRoleServiceTest {
 
     @Mock private Keycloak keycloak;
+    @Mock private KeycloakAuthProperties keycloakAuthProperties;
     @Mock private RealmResource realmResource;
     @Mock private UsersResource usersResource;
     @Mock private UserResource userResource;
@@ -44,12 +45,11 @@ class KeycloakUserRoleServiceTest {
     private static final String REALM    = "avira";
 
     private KeycloakUserRoleService service() {
-        KeycloakUserRoleService svc = new KeycloakUserRoleService(keycloak);
-        ReflectionTestUtils.setField(svc, "realm", REALM);
-        return svc;
+        return new KeycloakUserRoleService(keycloak, keycloakAuthProperties);
     }
 
     private void stubUserRoles(List<RoleRepresentation> existing) {
+        when(keycloakAuthProperties.getRealm()).thenReturn(REALM);
         when(keycloak.realm(REALM)).thenReturn(realmResource);
         when(realmResource.users()).thenReturn(usersResource);
         when(usersResource.get(USER_ID)).thenReturn(userResource);

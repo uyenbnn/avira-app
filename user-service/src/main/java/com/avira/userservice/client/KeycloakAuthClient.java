@@ -1,10 +1,10 @@
 package com.avira.userservice.client;
 
+import com.avira.commonlib.config.properties.KeycloakProperties;
 import com.avira.userservice.dto.TokenResponse;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.util.LinkedMultiValueMap;
@@ -18,18 +18,7 @@ import org.springframework.web.client.RestClientResponseException;
 public class KeycloakAuthClient {
 
     private final RestClient.Builder restClientBuilder;
-
-    @Value("${keycloak.sync.server-url}")
-    private String serverUrl;
-
-    @Value("${keycloak.auth.realm:${keycloak.sync.realm}}")
-    private String realm;
-
-    @Value("${keycloak.auth.client-id:${keycloak.sync.realm}-user-client}")
-    private String clientId;
-
-    @Value("${keycloak.auth.client-secret:}")
-    private String clientSecret;
+    private final KeycloakProperties keycloakProperties;
 
     private RestClient restClient;
 
@@ -39,6 +28,10 @@ public class KeycloakAuthClient {
     }
 
     public TokenResponse login(String username, String password) {
+        String serverUrl = keycloakProperties.getSync().getServerUrl();
+        String realm = keycloakProperties.getResolvedAuthRealm();
+        String clientId = keycloakProperties.getResolvedAuthClientId();
+        String clientSecret = keycloakProperties.getResolvedAuthClientSecret();
         String tokenUrl = serverUrl + "/realms/" + realm + "/protocol/openid-connect/token";
 
         MultiValueMap<String, String> form = new LinkedMultiValueMap<>();

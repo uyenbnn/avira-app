@@ -1,12 +1,12 @@
 package com.avira.authenticationservice.service;
 
 import com.avira.authenticationservice.dto.UserRolesResponse;
+import com.avira.commonlib.config.properties.KeycloakAuthProperties;
 import com.avira.commonlib.constants.UserRoles;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.keycloak.admin.client.Keycloak;
 import org.keycloak.representations.idm.RoleRepresentation;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -19,9 +19,7 @@ import java.util.stream.Collectors;
 public class KeycloakUserRoleService {
 
     private final Keycloak keycloak;
-
-    @Value("${keycloak.auth.realm:avira}")
-    private String realm;
+    private final KeycloakAuthProperties keycloakAuthProperties;
 
     /**
      * Replaces the managed roles of a Keycloak user.
@@ -34,7 +32,7 @@ public class KeycloakUserRoleService {
     public UserRolesResponse updateRoles(String userId, Set<String> requestedRoles) {
         validate(requestedRoles);
 
-        var userRoles = keycloak.realm(realm).users().get(userId).roles().realmLevel();
+        var userRoles = keycloak.realm(keycloakAuthProperties.getRealm()).users().get(userId).roles().realmLevel();
 
         Set<String> currentManagedRoles = userRoles.listAll().stream()
                 .map(RoleRepresentation::getName)
@@ -59,7 +57,7 @@ public class KeycloakUserRoleService {
         }
 
         log.info("Updated roles for user '{}' in realm '{}': removed={}, added={}",
-                userId, realm,
+                userId, keycloakAuthProperties.getRealm(),
                 toRemove.stream().map(RoleRepresentation::getName).toList(),
                 toAdd.stream().map(RoleRepresentation::getName).toList());
 
@@ -77,7 +75,7 @@ public class KeycloakUserRoleService {
     }
 
     private RoleRepresentation fetchRole(String roleName) {
-        return keycloak.realm(realm).roles().get(roleName).toRepresentation();
+        return keycloak.realm(keycloakAuthProperties.getRealm()).roles().get(roleName).toRepresentation();
     }
 }
 

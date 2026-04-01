@@ -1,5 +1,6 @@
 package com.avira.userservice.client;
 
+import com.avira.commonlib.config.properties.KeycloakProperties;
 import jakarta.ws.rs.core.Response;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -7,7 +8,6 @@ import org.keycloak.admin.client.Keycloak;
 import org.keycloak.admin.client.resource.RealmResource;
 import org.keycloak.representations.idm.CredentialRepresentation;
 import org.keycloak.representations.idm.UserRepresentation;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -19,9 +19,7 @@ import java.util.Optional;
 public class KeycloakAdminClient {
 
     private final Keycloak keycloak;
-
-    @Value("${keycloak.sync.realm}")
-    private String realm;
+    private final KeycloakProperties keycloakProperties;
 
     // ------------------------------------------------------------------ //
     //  Read
@@ -126,7 +124,7 @@ public class KeycloakAdminClient {
     // ------------------------------------------------------------------ //
 
     private RealmResource realm() {
-        return keycloak.realm(realm);
+        return keycloak.realm(keycloakProperties.getSync().getRealm());
     }
 
     private UserRepresentation buildUserRepresentation(String email, String firstName,

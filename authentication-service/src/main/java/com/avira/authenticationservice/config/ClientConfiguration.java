@@ -1,13 +1,18 @@
 package com.avira.authenticationservice.config;
 
 import com.avira.commonlib.client.KeycloakTokenWebClient;
-import org.springframework.beans.factory.annotation.Value;
+import com.avira.commonlib.config.properties.KeycloakAuthProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.reactive.function.client.WebClient;
 
+import lombok.RequiredArgsConstructor;
+
 @Configuration
+@RequiredArgsConstructor
 public class ClientConfiguration {
+
+    private final KeycloakAuthProperties keycloakAuthProperties;
 
     @Bean
     public WebClient.Builder webClientBuilder() {
@@ -16,12 +21,12 @@ public class ClientConfiguration {
 
 
     @Bean
-    public KeycloakTokenWebClient keycloakTokenWebClient(
-            WebClient.Builder webClientBuilder,
-            @Value("${keycloak.auth.token-url:http://localhost:8080/realms/avira/protocol/openid-connect/token}") String tokenUrl,
-            @Value("${keycloak.auth.logout-url:http://localhost:8080/realms/avira/protocol/openid-connect/logout}") String logoutUrl,
-            @Value("${keycloak.auth.client-id:avira-user-client}") String clientId,
-            @Value("${keycloak.auth.client-secret:}") String clientSecret) {
-        return new KeycloakTokenWebClient(webClientBuilder, tokenUrl, logoutUrl, clientId, clientSecret);
+    public KeycloakTokenWebClient keycloakTokenWebClient(WebClient.Builder webClientBuilder) {
+        return new KeycloakTokenWebClient(
+                webClientBuilder,
+                keycloakAuthProperties.getTokenUrl(),
+                keycloakAuthProperties.getLogoutUrl(),
+                keycloakAuthProperties.getClientId(),
+                keycloakAuthProperties.getClientSecret());
     }
 }

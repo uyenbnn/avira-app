@@ -1,5 +1,6 @@
 package com.avira.userservice.service;
 
+import com.avira.commonlib.config.properties.KeycloakProperties;
 import com.avira.userservice.constants.RoleConstants;
 import jakarta.ws.rs.WebApplicationException;
 import jakarta.ws.rs.core.Response;
@@ -9,12 +10,9 @@ import org.keycloak.representations.idm.ClientRepresentation;
 import org.keycloak.representations.idm.RealmRepresentation;
 import org.keycloak.representations.idm.RoleRepresentation;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.stereotype.Service;
-
-import java.util.List;
 
 @Slf4j
 @Service
@@ -29,34 +27,21 @@ public class KeycloakRealmBootstrapService implements ApplicationRunner {
     private static final String USER_CLIENT_SUFFIX = "-user-client";
 
     private final Keycloak keycloak;
+    private final KeycloakProperties keycloakProperties;
 
-    public KeycloakRealmBootstrapService(@Qualifier("keycloakMaster") Keycloak keycloak) {
+    public KeycloakRealmBootstrapService(@Qualifier("keycloakMaster") Keycloak keycloak,
+                                         KeycloakProperties keycloakProperties) {
         this.keycloak = keycloak;
+        this.keycloakProperties = keycloakProperties;
     }
-
-    @Value("${keycloak.sync.server-url:http://localhost:8080}")
-    private String serverUrl;
-
-    @Value("${keycloak.admin.realm:master}")
-    private String adminRealm;
-
-    @Value("${keycloak.sync.client-id:admin-cli}")
-    private String clientId;
-
-    @Value("${keycloak.sync.realm:avira}")
-    private String targetRealm;
-
-    @Value("${keycloak.realm.auto-create:false}")
-    private boolean autoCreateRealm;
-
-    @Value("${keycloak.realm.auto-create.fail-fast:true}")
-    private boolean failFast;
 
     @Override
     public void run(ApplicationArguments args) {
-        if (!autoCreateRealm) {
+        if (!keycloakProperties.getRealm().isAutoCreate()) {
             return;
         }
+
+        String targetRealm = keycloakProperties.getSync().getRealm();
 
         try {
             boolean exists = keycloak.realms().findAll().stream()
@@ -82,7 +67,7 @@ public class KeycloakRealmBootstrapService implements ApplicationRunner {
             ensureUserClientForRealm();
         } catch (Exception ex) {
             String details = buildBootstrapErrorDetails(ex);
-            if (failFast) {
+            if (keycloakProperties.getRealm().isAutoCreateFailFast()) {
                 throw new IllegalStateException("Keycloak realm bootstrap failed: " + details, ex);
             }
             log.error("Keycloak realm bootstrap failed: {}", details, ex);
@@ -103,6 +88,7 @@ public class KeycloakRealmBootstrapService implements ApplicationRunner {
     }
 
     private void ensureRealmRole(String roleName) {
+        String targetRealm = realm();
         var rolesResource = keycloak.realm(targetRealm).roles();
         boolean exists = rolesResource.list().stream()
                 .anyMatch(r -> roleName.equals(r.getName()));
@@ -126,6 +112,7 @@ public class KeycloakRealmBootstrapService implements ApplicationRunner {
      * — used by admin back-end operations (e.g. user management via Admin API).
      */
     private void ensureAdminClientForRealm() {
+        String targetRealm = realm();
         var clientsResource = keycloak.realm(targetRealm).clients();
         boolean exists = !clientsResource.findByClientId(targetRealm).isEmpty();
         if (exists) {
@@ -158,6 +145,7 @@ public class KeycloakRealmBootstrapService implements ApplicationRunner {
      * grants    = direct access grants enabled
      */
     private void ensureUserClientForRealm() {
+        String targetRealm = realm();
         String userClientId = targetRealm + USER_CLIENT_SUFFIX;
         var clientsResource = keycloak.realm(targetRealm).clients();
 
@@ -186,6 +174,7 @@ public class KeycloakRealmBootstrapService implements ApplicationRunner {
     // ------------------------------------------------------------------ //
 
     private void createClient(ClientRepresentation client, String description) {
+        String targetRealm = realm();
         try (Response response = keycloak.realm(targetRealm).clients().create(client)) {
             int status = response.getStatus();
             if (status >= 200 && status < 300) {
@@ -200,11 +189,12 @@ public class KeycloakRealmBootstrapService implements ApplicationRunner {
     }
 
     private String buildBootstrapErrorDetails(Exception ex) {
+        String targetRealm = realm();
         StringBuilder sb = new StringBuilder();
         sb.append("targetRealm=").append(targetRealm)
-                .append(", adminRealm=").append(adminRealm)
-                .append(", clientId=").append(clientId)
-                .append(", serverUrl=").append(serverUrl);
+                .append(", adminRealm=").append(keycloakProperties.getAdmin().getRealm())
+                .append(", clientId=").append(keycloakProperties.getSync().getClientId())
+                .append(", serverUrl=").append(keycloakProperties.getSync().getServerUrl());
 
         if (ex instanceof WebApplicationException webEx) {
             Response response = webEx.getResponse();
@@ -238,5 +228,9 @@ public class KeycloakRealmBootstrapService implements ApplicationRunner {
         } catch (Exception ignored) {
             return null;
         }
+    }
+
+    private String realm() {
+        return keycloakProperties.getSync().getRealm();
     }
 }
