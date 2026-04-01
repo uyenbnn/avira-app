@@ -19,8 +19,9 @@ public class ClientConfiguration {
     public KeycloakTokenWebClient keycloakTokenWebClient(
             WebClient.Builder webClientBuilder,
             @Value("${keycloak.auth.token-url:http://localhost:8080/realms/avira/protocol/openid-connect/token}") String tokenUrl,
+            @Value("${keycloak.auth.logout-url:http://localhost:8080/realms/avira/protocol/openid-connect/logout}") String logoutUrl,
             @Value("${keycloak.auth.client-id:avira-user-client}") String clientId,
             @Value("${keycloak.auth.client-secret:}") String clientSecret) {
-        return new KeycloakTokenWebClient(webClientBuilder, tokenUrl, clientId, clientSecret);
+        return new KeycloakTokenWebClient(webClientBuilder, tokenUrl, logoutUrl, clientId, clientSecret);
     }
 }

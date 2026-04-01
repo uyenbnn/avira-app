@@ -1,6 +1,7 @@
 package com.avira.authenticationservice.service;
 
 import com.avira.authenticationservice.dto.LoginRequest;
+import com.avira.authenticationservice.dto.LogoutRequest;
 import com.avira.authenticationservice.dto.RefreshTokenRequest;
 import com.avira.authenticationservice.dto.RegisterRequest;
 import com.avira.authenticationservice.dto.TokenResponse;
@@ -35,6 +36,10 @@ public class AuthenticationOrchestrationService {
 
     public TokenResponse refresh(RefreshTokenRequest request) {
         return toTokenResponse(keycloakTokenWebClient.refresh(request.refreshToken()));
+    }
+
+    public void logout(LogoutRequest request) {
+        keycloakTokenWebClient.logout(request.refreshToken());
     }
 
     private TokenResponse toTokenResponse(Map<String, Object> body) {

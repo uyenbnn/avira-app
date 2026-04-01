@@ -1,13 +1,13 @@
 package com.avira.authenticationservice.controller;
 
 import com.avira.authenticationservice.dto.LoginRequest;
+import com.avira.authenticationservice.dto.LogoutRequest;
 import com.avira.authenticationservice.dto.RefreshTokenRequest;
 import com.avira.authenticationservice.dto.RegisterRequest;
 import com.avira.authenticationservice.dto.TokenResponse;
 import com.avira.authenticationservice.dto.UpdateUserRolesRequest;
 import com.avira.authenticationservice.dto.UserResponse;
 import com.avira.authenticationservice.dto.UserRolesResponse;
-import com.avira.authenticationservice.fixture.RegisterRequestFixtures;
 import com.avira.authenticationservice.service.AuthenticationOrchestrationService;
 import com.avira.commonlib.exception.ConflictException;
 import com.avira.commonlib.constants.UserRoles;
@@ -84,6 +84,16 @@ class AuthenticationControllerTest {
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(response.getBody()).isEqualTo(expected);
         verify(authenticationOrchestrationService).refresh(request);
+    }
+
+    @Test
+    void shouldLogout() {
+        LogoutRequest request = new LogoutRequest("refresh-token");
+
+        ResponseEntity<Void> response = authenticationController.logout(request);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
+        verify(authenticationOrchestrationService).logout(request);
     }
 
     @Test

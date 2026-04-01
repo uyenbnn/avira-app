@@ -12,12 +12,22 @@ public class KeycloakTokenWebClient {
 
     private final WebClient webClient;
     private final String tokenUrl;
+    private final String logoutUrl;
     private final String clientId;
     private final String clientSecret;
 
     public KeycloakTokenWebClient(WebClient.Builder builder, String tokenUrl, String clientId, String clientSecret) {
+        this(builder, tokenUrl, deriveLogoutUrl(tokenUrl), clientId, clientSecret);
+    }
+
+    public KeycloakTokenWebClient(WebClient.Builder builder,
+                                  String tokenUrl,
+                                  String logoutUrl,
+                                  String clientId,
+                                  String clientSecret) {
         this.webClient = builder.build();
         this.tokenUrl = tokenUrl;
+        this.logoutUrl = logoutUrl;
         this.clientId = clientId;
         this.clientSecret = clientSecret;
     }
@@ -35,6 +45,19 @@ public class KeycloakTokenWebClient {
         form.add("grant_type", "refresh_token");
         form.add("refresh_token", refreshToken);
         return exchange(form);
+    }
+
+    public void logout(String refreshToken) {
+        MultiValueMap<String, String> form = baseForm();
+        form.add("refresh_token", refreshToken);
+
+        webClient.post()
+                .uri(logoutUrl)
+                .contentType(MediaType.APPLICATION_FORM_URLENCODED)
+                .bodyValue(form)
+                .retrieve()
+                .toBodilessEntity()
+                .block();
     }
 
     private MultiValueMap<String, String> baseForm() {
@@ -56,6 +79,16 @@ public class KeycloakTokenWebClient {
                 .bodyToMono(Map.class)
                 .switchIfEmpty(Mono.error(new IllegalStateException("Keycloak token response is empty")))
                 .block();
+    }
+
+    private static String deriveLogoutUrl(String tokenUrl) {
+        if (tokenUrl == null || tokenUrl.isBlank()) {
+            throw new IllegalArgumentException("tokenUrl must not be blank");
+        }
+        if (tokenUrl.endsWith("/token")) {
+            return tokenUrl.substring(0, tokenUrl.length() - "/token".length()) + "/logout";
+        }
+        return tokenUrl;
     }
 }
 

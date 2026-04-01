@@ -1,6 +1,7 @@
 package com.avira.authenticationservice.controller;
 
 import com.avira.authenticationservice.dto.LoginRequest;
+import com.avira.authenticationservice.dto.LogoutRequest;
 import com.avira.authenticationservice.dto.RefreshTokenRequest;
 import com.avira.authenticationservice.dto.RegisterRequest;
 import com.avira.authenticationservice.dto.TokenResponse;
@@ -40,6 +41,12 @@ public class AuthenticationController {
     @PostMapping("/refresh-token")
     public ResponseEntity<TokenResponse> refreshToken(@RequestBody RefreshTokenRequest request) {
         return ResponseEntity.ok(authenticationOrchestrationService.refresh(request));
+    }
+
+    @PostMapping("/logout")
+    public ResponseEntity<Void> logout(@RequestBody LogoutRequest request) {
+        authenticationOrchestrationService.logout(request);
+        return ResponseEntity.noContent().build();
     }
 
     @PutMapping("/users/{userId}/roles")
