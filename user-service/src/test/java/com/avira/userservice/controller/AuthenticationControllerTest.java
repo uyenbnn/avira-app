@@ -15,7 +15,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 
 import java.time.Instant;
-import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.verify;
@@ -32,9 +31,9 @@ class AuthenticationControllerTest {
 
     @Test
     void shouldRegisterUser() {
-        RegisterRequest request = new RegisterRequest("alice@avira.com", "StrongPass123", "0123456789");
+        RegisterRequest request = new RegisterRequest("alice@avira.com", "StrongPass123", "0123456789", "Alice", "Smith");
         UserResponse user = UserResponse.builder()
-                .id(UUID.randomUUID())
+                .id("kc-user-id")
                 .email("alice@avira.com")
                 .phone("0123456789")
                 .status(UserStatus.ACTIVE)

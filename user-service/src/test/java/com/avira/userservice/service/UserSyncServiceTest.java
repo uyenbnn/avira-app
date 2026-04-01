@@ -1,5 +1,6 @@
 package com.avira.userservice.service;
 
+import com.avira.commonlib.messaging.user.UserRegisteredEvent;
 import com.avira.userservice.client.KeycloakAdminClient;
 import com.avira.userservice.constants.RoleConstants;
 import com.avira.userservice.dto.CreateUserRequest;
@@ -60,19 +61,22 @@ class UserSyncServiceTest {
 
         when(keycloakAdminClient.createUser(eq("alice@avira.com"), eq("Alice"), eq("Smith"), eq("StrongPass123"), eq(false)))
                 .thenReturn(Optional.of("kc-user-id"));
-        when(userRepository.save(any(User.class))).thenAnswer(invocation -> {
-            User saved = invocation.getArgument(0);
-            saved.setId("domain-user-1");
-            return saved;
-        });
+        when(userRepository.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
         when(userProfileRepository.save(any(UserProfile.class))).thenAnswer(invocation -> invocation.getArgument(0));
         when(userAuthProviderRepository.save(any(UserAuthProvider.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(userAuthProviderRepository.findFirstByUserIdAndProvider("kc-user-id", AuthProvider.LOCAL))
+                .thenAnswer(invocation -> Optional.of(UserAuthProvider.builder()
+                        .user(User.builder().id("kc-user-id").build())
+                        .provider(AuthProvider.LOCAL)
+                        .providerUserId("kc-user-id")
+                        .email("alice@avira.com")
+                        .build()));
         when(keycloakAdminClient.findById("kc-user-id")).thenReturn(Optional.of(identity));
 
         UserResponse result = userService.create(request);
 
         assertThat(result).isNotNull();
-        assertThat(result.id()).isEqualTo("domain-user-1");
+        assertThat(result.id()).isEqualTo("kc-user-id");
         assertThat(result.email()).isEqualTo("alice@avira.com");
         assertThat(result.phone()).isEqualTo("0123456789");
 
@@ -82,6 +86,28 @@ class UserSyncServiceTest {
         verify(userAuthProviderRepository).save(any(UserAuthProvider.class));
         verify(keycloakAdminClient).assignRole("kc-user-id", RoleConstants.USER);
         verify(keycloakAdminClient).findById("kc-user-id");
+    }
+
+    @Test
+    void shouldCreateLocalUserFromRegistrationEvent() {
+        UserRegisteredEvent event = new UserRegisteredEvent(
+                "kc-user-id",
+                "alice",
+                "alice@avira.com",
+                "Alice",
+                "Smith"
+        );
+
+        when(userRepository.existsById("kc-user-id")).thenReturn(false);
+        when(userRepository.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(userProfileRepository.save(any(UserProfile.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(userAuthProviderRepository.save(any(UserAuthProvider.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        userService.createFromRegisteredEvent(event);
+
+        verify(userRepository).save(any(User.class));
+        verify(userProfileRepository).save(any(UserProfile.class));
+        verify(userAuthProviderRepository).save(any(UserAuthProvider.class));
     }
 
     @Test

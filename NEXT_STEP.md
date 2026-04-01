@@ -1,0 +1,1 @@
+implement auto create stream when create a new topic, and auto delete stream when delete topic

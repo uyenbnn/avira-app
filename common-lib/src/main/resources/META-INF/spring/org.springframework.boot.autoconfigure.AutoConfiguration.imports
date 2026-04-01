@@ -1,2 +1,4 @@
 com.avira.commonlib.autoconfigure.CommonExceptionHandlingAutoConfiguration
+com.avira.commonlib.autoconfigure.MessagingAutoConfiguration
+com.avira.commonlib.autoconfigure.RabbitStreamMessagingAutoConfiguration
 

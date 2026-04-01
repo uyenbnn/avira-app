@@ -1,5 +1,6 @@
 package com.avira.userservice.service;
 
+import com.avira.commonlib.messaging.user.UserRegisteredEvent;
 import com.avira.userservice.client.KeycloakAdminClient;
 import com.avira.userservice.constants.RoleConstants;
 import com.avira.userservice.dto.CreateUserRequest;
@@ -61,28 +62,14 @@ public class UserService {
                         "Failed to create Keycloak identity for email: " + request.email()));
 
         try {
-            User user = userRepository.save(User.builder()
-                    .phone(request.phone())
-                    .status(UserStatus.ACTIVE)
-                    .build());
-
-            userProfileRepository.save(UserProfile.builder()
-                    .user(user)
-                    .firstName(request.firstName())
-                    .lastName(request.lastName())
-                    .build());
-
-            UserAuthProvider authProvider = userAuthProviderRepository.save(UserAuthProvider.builder()
-                    .user(user)
-                    .provider(AuthProvider.LOCAL)
-                    .providerUserId(keycloakId)
-                    .email(request.email())
-                    .build());
+            User user = createLocalUserRecord(keycloakId, request.email(), request.phone(), request.firstName(), request.lastName());
 
             keycloakAdminClient.assignRole(keycloakId, RoleConstants.USER);
 
+            UserAuthProvider authProvider = findLocalAuthProvider(user.getId()).orElse(null);
             log.info("Created domain user id={} linkedToProvider={} providerUserId={}",
-                    user.getId(), authProvider.getProvider(), authProvider.getProviderUserId());
+                    user.getId(), authProvider != null ? authProvider.getProvider() : null,
+                    authProvider != null ? authProvider.getProviderUserId() : null);
             return toResponse(user, authProvider);
         } catch (RuntimeException e) {
             try {
@@ -93,6 +80,21 @@ public class UserService {
             }
             throw e;
         }
+    }
+
+    @Transactional
+    public void createFromRegisteredEvent(UserRegisteredEvent event) {
+        if (event == null || event.userId() == null || event.userId().isBlank()) {
+            throw new IllegalArgumentException("Registered event userId is required");
+        }
+
+        if (userRepository.existsById(event.userId())) {
+            log.info("Skipping user-domain registered event because user '{}' already exists", event.userId());
+            return;
+        }
+
+        createLocalUserRecord(event.userId(), event.email(), null, event.firstName(), event.lastName());
+        log.info("Created local user '{}' from registration event", event.userId());
     }
 
     @Transactional
@@ -144,6 +146,32 @@ public class UserService {
     private User getOrThrow(String id) {
         return userRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("User not found: " + id));
+    }
+
+    private User createLocalUserRecord(String userId,
+                                       String email,
+                                       String phone,
+                                       String firstName,
+                                       String lastName) {
+        User user = userRepository.save(User.builder()
+                .id(userId)
+                .phone(phone)
+                .status(UserStatus.ACTIVE)
+                .build());
+
+        userProfileRepository.save(UserProfile.builder()
+                .user(user)
+                .firstName(firstName)
+                .lastName(lastName)
+                .build());
+
+        userAuthProviderRepository.save(UserAuthProvider.builder()
+                .user(user)
+                .provider(AuthProvider.LOCAL)
+                .providerUserId(userId)
+                .email(email)
+                .build());
+        return user;
     }
 
     private UserResponse toResponse(User user) {
