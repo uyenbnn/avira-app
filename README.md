@@ -67,15 +67,34 @@ authentication-service:
 
 user-service:
     description: 
-        - User Service manages user profiles and related information. 
-        - It provides endpoints for retrieving and updating user details.
+        - User Service manages user profiles and related business domain information. 
+        - It provides endpoints for retrieving, creating, and updating user profiles.
+        - Event-driven: consumes UserRegisteredEvent from authentication-service via messaging to materialize local user records.
+        - No identity provisioning (owned by authentication-service).
     endpoints:
-        - POST /users: "Creates a new user profile with the provided information."
+        - POST /users: "Creates a new user profile with the provided information (business data only)."
         - GET /users/{id}: "Retrieves the profile information of a user by their ID."
         - PUT /users/{id}: "Updates the profile information of a user by their ID."
+        - PATCH /users/{id}/status: "Changes the user account status (ACTIVE, SUSPENDED, DELETED)."
+        - DELETE /users/{id}: "Deletes a user profile and related business data."
         - GET /users:
-            - Retrieves a list of all users in the system.
-            - filter by user type like seller or buyer, shop ower or customer, and other user types that we will have in the future.
+            - Retrieves a list of all users in the system with pagination.
+            - Filter by user status and other business domain properties.
+
+project-service:
+    description:
+        - Project Service manages multi-tenant configurations and tenant lifecycle.
+        - It provides endpoints for CRUD operations on tenants.
+        - Event-driven: publishes TenantCreatedEvent to application-initialization-service via messaging for tenant bootstrap.
+        - Designed for multi-tenant e-commerce platform where each tenant represents an independent workspace.
+    endpoints:
+        - POST /tenants: "Creates a new tenant with the provided information and publishes TenantCreatedEvent."
+        - GET /tenants/{id}: "Retrieves the details of a specific tenant by ID."
+        - GET /tenants: "Retrieves a paginated list of all tenants."
+        - GET /tenants/owner/{ownerId}: "Retrieves a paginated list of tenants owned by a specific user."
+        - PUT /tenants/{id}: "Updates tenant information (name, description, max users)."
+        - PATCH /tenants/{id}/status: "Changes the tenant status (ACTIVE, SUSPENDED, DELETED)."
+        - DELETE /tenants/{id}: "Soft deletes a tenant by marking it as DELETED."
 
 common-lib:
     description: 
