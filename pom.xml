@@ -16,6 +16,7 @@
         <module>user-service</module>
         <module>authentication-service</module>
         <module>application-initialization-service</module>
+        <module>project-service</module>
     </modules>
 
 </project>

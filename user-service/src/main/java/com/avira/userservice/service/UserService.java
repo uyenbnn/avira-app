@@ -1,8 +1,6 @@
 package com.avira.userservice.service;
 
 import com.avira.commonlib.messaging.user.UserRegisteredEvent;
-import com.avira.userservice.client.KeycloakAdminClient;
-import com.avira.userservice.constants.RoleConstants;
 import com.avira.userservice.dto.CreateUserRequest;
 import com.avira.userservice.dto.UpdateUserRequest;
 import com.avira.userservice.dto.UserResponse;
@@ -17,7 +15,6 @@ import com.avira.userservice.repository.UserRepository;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.keycloak.representations.idm.UserRepresentation;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -32,7 +29,6 @@ public class UserService {
     private final UserRepository userRepository;
     private final UserProfileRepository userProfileRepository;
     private final UserAuthProviderRepository userAuthProviderRepository;
-    private final KeycloakAdminClient keycloakAdminClient;
 
     // ------------------------------------------------------------------ //
     //  Queries
@@ -52,34 +48,13 @@ public class UserService {
 
     @Transactional
     public UserResponse create(CreateUserRequest request) {
-        String keycloakId = keycloakAdminClient.createUser(
-                        request.email(),
-                        request.firstName(),
-                        request.lastName(),
-                        request.password(),
-                        false)
-                .orElseThrow(() -> new IllegalStateException(
-                        "Failed to create Keycloak identity for email: " + request.email()));
+        User user = createLocalUserRecord(null, request.email(), request.phone(), request.firstName(), request.lastName());
 
-        try {
-            User user = createLocalUserRecord(keycloakId, request.email(), request.phone(), request.firstName(), request.lastName());
-
-            keycloakAdminClient.assignRole(keycloakId, RoleConstants.USER);
-
-            UserAuthProvider authProvider = findLocalAuthProvider(user.getId()).orElse(null);
-            log.info("Created domain user id={} linkedToProvider={} providerUserId={}",
-                    user.getId(), authProvider != null ? authProvider.getProvider() : null,
-                    authProvider != null ? authProvider.getProviderUserId() : null);
-            return toResponse(user, authProvider);
-        } catch (RuntimeException e) {
-            try {
-                keycloakAdminClient.deleteUser(keycloakId);
-            } catch (Exception cleanupError) {
-                log.error("Failed to rollback Keycloak identity {} after local create error: {}",
-                        keycloakId, cleanupError.getMessage());
-            }
-            throw e;
-        }
+        UserAuthProvider authProvider = findLocalAuthProvider(user.getId()).orElse(null);
+        log.info("Created domain-only user id={} linkedToProvider={} providerUserId={}",
+                user.getId(), authProvider != null ? authProvider.getProvider() : null,
+                authProvider != null ? authProvider.getProviderUserId() : null);
+        return toResponse(user, authProvider);
     }
 
     @Transactional
@@ -116,22 +91,12 @@ public class UserService {
         user.setStatus(status);
         userRepository.save(user);
 
-        boolean enabled = status == UserStatus.ACTIVE;
-        findLocalAuthProvider(id)
-                .ifPresentOrElse(
-                        authProvider -> keycloakAdminClient.setUserEnabled(authProvider.getProviderUserId(), enabled),
-                        () -> log.warn("No linked identity provider found for domain user id={} while changing status", id)
-                );
-
         log.info("Changed status of domain user id={} to {}", id, status);
     }
 
     @Transactional
     public void delete(String id) {
         User user = getOrThrow(id);
-
-        findLocalAuthProvider(id)
-                .ifPresent(authProvider -> keycloakAdminClient.deleteUser(authProvider.getProviderUserId()));
 
         userAuthProviderRepository.deleteByUserId(id);
         userProfileRepository.deleteById(id);
@@ -159,6 +124,8 @@ public class UserService {
                 .status(UserStatus.ACTIVE)
                 .build());
 
+        String providerUserId = (userId != null && !userId.isBlank()) ? userId : user.getId();
+
         userProfileRepository.save(UserProfile.builder()
                 .user(user)
                 .firstName(firstName)
@@ -168,7 +135,7 @@ public class UserService {
         userAuthProviderRepository.save(UserAuthProvider.builder()
                 .user(user)
                 .provider(AuthProvider.LOCAL)
-                .providerUserId(userId)
+                .providerUserId(providerUserId)
                 .email(email)
                 .build());
         return user;
@@ -179,17 +146,12 @@ public class UserService {
     }
 
     private UserResponse toResponse(User user, UserAuthProvider authProvider) {
-        UserRepresentation identity = null;
-        if (authProvider != null && authProvider.getProviderUserId() != null && !authProvider.getProviderUserId().isBlank()) {
-            identity = keycloakAdminClient.findById(authProvider.getProviderUserId()).orElse(null);
-        }
-
         return UserResponse.builder()
                 .id(user.getId())
-                .email(identity != null ? identity.getEmail() : authProvider != null ? authProvider.getEmail() : null)
+                .email(authProvider != null ? authProvider.getEmail() : null)
                 .phone(user.getPhone())
                 .status(user.getStatus())
-                .emailVerified(identity != null && Boolean.TRUE.equals(identity.isEmailVerified()))
+                .emailVerified(false)
                 .createdAt(user.getCreatedAt())
                 .updatedAt(user.getUpdatedAt())
                 .lastLoginAt(user.getLastLoginAt())
