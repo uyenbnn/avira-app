@@ -1,0 +1,58 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: project-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: project-service
+  template:
+    metadata:
+      labels:
+        app: project-service
+    spec:
+      containers:
+        - name: project-service
+          image: avira/project-service:local
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 10004
+          envFrom:
+            - configMapRef:
+                name: avira-app-env
+            - secretRef:
+                name: avira-app-secret
+          env:
+            - name: SPRING_DATASOURCE_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: avira-app-env
+                  key: DB_URL_PROJECT
+            - name: SPRING_DATASOURCE_USERNAME
+              valueFrom:
+                configMapKeyRef:
+                  name: avira-app-env
+                  key: DB_USERNAME
+            - name: SPRING_DATASOURCE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: avira-app-secret
+                  key: DB_PASSWORD
+            - name: SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI
+              valueFrom:
+                configMapKeyRef:
+                  name: avira-app-env
+                  key: KEYCLOAK_ISSUER_URI
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: project-service
+spec:
+  selector:
+    app: project-service
+  ports:
+    - port: 10004
+      targetPort: 10004
+

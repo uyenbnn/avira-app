@@ -1,9 +1,10 @@
 package com.avira.userservice.controller;
 
-import com.avira.userservice.dto.CreateUserRequest;
-import com.avira.userservice.dto.UserResponse;
-import com.avira.userservice.enums.UserStatus;
-import com.avira.userservice.service.UserService;
+import com.avira.userservice.user.controller.UserController;
+import com.avira.userservice.user.dto.CreateUserRequest;
+import com.avira.userservice.user.dto.UserResponse;
+import com.avira.userservice.user.enums.UserStatus;
+import com.avira.userservice.user.service.UserService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -62,7 +63,6 @@ class UserSyncControllerTest {
     void shouldCreateUser() {
         CreateUserRequest request = new CreateUserRequest(
                 "new@avira.com",
-                "StrongPass123",
                 "0987654321",
                 "New",
                 "User"

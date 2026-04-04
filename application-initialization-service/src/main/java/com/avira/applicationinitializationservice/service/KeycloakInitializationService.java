@@ -2,7 +2,8 @@ package com.avira.applicationinitializationservice.service;
 
 import com.avira.applicationinitializationservice.dto.InitializationResponse;
 import com.avira.commonlib.constants.UserRoles;
-import jakarta.ws.rs.WebApplicationException;
+import com.avira.commonlib.messaging.tenant.TenantAuthenticationEnabledEvent;
+import com.avira.commonlib.messaging.tenant.TenantCreatedEvent;
 import jakarta.ws.rs.core.Response;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -15,8 +16,6 @@ import org.keycloak.representations.idm.RoleRepresentation;
 import org.keycloak.representations.idm.UserRepresentation;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.ApplicationArguments;
-import org.springframework.boot.ApplicationRunner;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -25,7 +24,7 @@ import java.util.Set;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class KeycloakInitializationService implements ApplicationRunner {
+public class KeycloakInitializationService {
 
     private static final String USER_CLIENT_SUFFIX = "-user-client";
     private static final int MAX_ERROR_BODY_LEN = 500;
@@ -34,21 +33,6 @@ public class KeycloakInitializationService implements ApplicationRunner {
 
     @Value("${keycloak.sync.realm:avira}")
     private String targetRealm;
-
-    @Value("${keycloak.sync.server-url:http://localhost:8080}")
-    private String serverUrl;
-
-    @Value("${keycloak.admin.realm:master}")
-    private String adminRealm;
-
-    @Value("${keycloak.sync.client-id:admin-cli}")
-    private String adminClientId;
-
-    @Value("${keycloak.init.auto-run:false}")
-    private boolean autoRun;
-
-    @Value("${keycloak.init.fail-fast:true}")
-    private boolean failFast;
 
     @Value("${keycloak.seed.anonymous.username:anonymous}")
     private String anonymousUsername;
@@ -74,24 +58,10 @@ public class KeycloakInitializationService implements ApplicationRunner {
     @Value("${keycloak.seed.admin-client.realm-management-roles:view-users,query-users,manage-users,view-realm}")
     private List<String> adminClientRealmManagementRoles;
 
-    @Override
-    public void run(ApplicationArguments args) {
-        if (!autoRun) {
-            return;
-        }
+    @Value("${keycloak.sync.tenant-realm-prefix:tenant-}")
+    private String tenantRealmPrefix;
 
-        try {
-            initialize();
-        } catch (Exception ex) {
-            String details = buildErrorDetails(ex);
-            if (failFast) {
-                throw new IllegalStateException("Keycloak initialization failed: " + details, ex);
-            }
-            log.error("Keycloak initialization failed: {}", details, ex);
-        }
-    }
-
-    public InitializationResponse initialize() {
+    public InitializationResponse.KeycloakInitialization initializeKeycloak() {
         boolean realmCreated = ensureRealm();
         ensureBaseRoles();
         boolean userClientCreated = ensureUserAuthClient();
@@ -99,7 +69,7 @@ public class KeycloakInitializationService implements ApplicationRunner {
         boolean anonymousUserCreated = ensureUser(anonymousUsername, anonymousEmail, "Anonymous", "User", anonymousPassword, UserRoles.ANONYMOUS);
         boolean defaultAdminUserCreated = ensureUser(defaultAdminUsername, defaultAdminEmail, "Default", "Admin", defaultAdminPassword, UserRoles.ADMIN);
 
-        return new InitializationResponse(
+        return new InitializationResponse.KeycloakInitialization(
                 targetRealm,
                 realmCreated,
                 userClientCreated,
@@ -107,6 +77,41 @@ public class KeycloakInitializationService implements ApplicationRunner {
                 anonymousUserCreated,
                 defaultAdminUserCreated
         );
+    }
+
+    public synchronized void initializeTenantKeycloak(TenantCreatedEvent event) {
+        String previousRealm = targetRealm;
+        try {
+            targetRealm = resolveTenantRealm(event.tenantId());
+            boolean realmCreated = ensureRealm();
+            ensureBaseRoles();
+            boolean userClientCreated = ensureUserAuthClient();
+            log.info("Initialized tenant Keycloak realm='{}' tenantId={} realmCreated={} userClientCreated={}",
+                    targetRealm, event.tenantId(), realmCreated, userClientCreated);
+        } finally {
+            targetRealm = previousRealm;
+        }
+    }
+
+    public synchronized void initializeTenantKeycloak(TenantAuthenticationEnabledEvent event) {
+        String previousRealm = targetRealm;
+        try {
+            targetRealm = resolveTenantRealm(event.tenantId());
+            boolean realmCreated = ensureRealm();
+            ensureBaseRoles();
+            boolean userClientCreated = ensureUserAuthClient();
+            log.info("Initialized tenant Keycloak realm='{}' tenantId={} realmCreated={} userClientCreated={}",
+                    targetRealm, event.tenantId(), realmCreated, userClientCreated);
+        } finally {
+            targetRealm = previousRealm;
+        }
+    }
+
+    private String resolveTenantRealm(String tenantId) {
+        if (tenantId == null || tenantId.isBlank()) {
+            throw new IllegalArgumentException("tenantId is required to initialize tenant Keycloak realm");
+        }
+        return tenantRealmPrefix + tenantId;
     }
 
     private boolean ensureRealm() {
@@ -352,28 +357,6 @@ public class KeycloakInitializationService implements ApplicationRunner {
         userResource.roles().realmLevel().add(List.of(role));
     }
 
-    private String buildErrorDetails(Exception ex) {
-        StringBuilder sb = new StringBuilder();
-        sb.append("targetRealm=").append(targetRealm)
-                .append(", adminRealm=").append(adminRealm)
-                .append(", clientId=").append(adminClientId)
-                .append(", serverUrl=").append(serverUrl);
-
-        if (ex instanceof WebApplicationException webEx) {
-            Response response = webEx.getResponse();
-            if (response != null) {
-                sb.append(", httpStatus=").append(response.getStatus());
-                String body = readResponseBody(response);
-                if (body != null && !body.isBlank()) {
-                    sb.append(", responseBody=").append(body);
-                }
-            }
-        }
-
-        sb.append(", cause=").append(ex.getClass().getSimpleName())
-                .append(": ").append(ex.getMessage());
-        return sb.toString();
-    }
 
     private String readResponseBody(Response response) {
         try {

@@ -2,8 +2,14 @@ package com.avira.authenticationservice.service;
 
 import com.avira.authenticationservice.dto.RegisterRequest;
 import com.avira.authenticationservice.dto.UserResponse;
+import com.avira.commonlib.config.properties.ApplicationProperties;
+import com.avira.commonlib.config.properties.KeycloakAuthProperties;
+import com.avira.commonlib.constants.EventTopics;
+import com.avira.commonlib.constants.UserDomainActions;
 import com.avira.commonlib.constants.UserRoles;
 import com.avira.commonlib.exception.ConflictException;
+import com.avira.commonlib.messaging.EventPublisher;
+import com.avira.commonlib.messaging.user.UserRegisteredEvent;
 import jakarta.ws.rs.core.Response;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -12,7 +18,6 @@ import org.keycloak.admin.client.Keycloak;
 import org.keycloak.representations.idm.CredentialRepresentation;
 import org.keycloak.representations.idm.RoleRepresentation;
 import org.keycloak.representations.idm.UserRepresentation;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -23,16 +28,22 @@ import java.util.List;
 public class KeycloakUserRegistrationService {
 
     private final Keycloak keycloak;
-
-    @Value("${keycloak.auth.realm:avira}")
-    private String realm;
+    private final EventPublisher eventPublisher;
+    private final KeycloakAuthProperties keycloakAuthProperties;
+    private final ApplicationProperties applicationProperties;
 
     public UserResponse register(RegisterRequest request) {
         String userId = createUser(request);
-        setPassword(userId, request.password());
-        assignRole(userId, UserRoles.USER);
-        log.info("Registered user '{}' in realm '{}'", request.username(), realm);
-        return new UserResponse(userId, request.username(), request.email(), request.firstName(), request.lastName());
+        try {
+            setPassword(userId, request.password());
+            assignRole(userId, UserRoles.USER);
+            publishRegisteredEvent(userId, request);
+            log.info("Registered user '{}' in realm '{}'", request.username(), keycloakAuthProperties.getRealm());
+            return new UserResponse(userId, request.username(), request.email(), request.firstName(), request.lastName());
+        } catch (RuntimeException ex) {
+            deleteUserQuietly(userId);
+            throw ex;
+        }
     }
 
     private String createUser(RegisterRequest request) {
@@ -44,7 +55,7 @@ public class KeycloakUserRegistrationService {
         user.setEnabled(true);
         user.setEmailVerified(false);
 
-        try (Response response = keycloak.realm(realm).users().create(user)) {
+        try (Response response = keycloak.realm(keycloakAuthProperties.getRealm()).users().create(user)) {
             int status = response.getStatus();
             if (status == 409) {
                 throw new ConflictException("User already exists: " + request.username());
@@ -62,12 +73,41 @@ public class KeycloakUserRegistrationService {
         credential.setType(CredentialRepresentation.PASSWORD);
         credential.setTemporary(false);
         credential.setValue(password);
-        keycloak.realm(realm).users().get(userId).resetPassword(credential);
+        keycloak.realm(keycloakAuthProperties.getRealm()).users().get(userId).resetPassword(credential);
     }
 
     private void assignRole(String userId, String roleName) {
-        RoleRepresentation role = keycloak.realm(realm).roles().get(roleName).toRepresentation();
-        keycloak.realm(realm).users().get(userId).roles().realmLevel().add(List.of(role));
+        RoleRepresentation role = keycloak.realm(keycloakAuthProperties.getRealm()).roles().get(roleName).toRepresentation();
+        keycloak.realm(keycloakAuthProperties.getRealm()).users().get(userId).roles().realmLevel().add(List.of(role));
+    }
+
+    private void publishRegisteredEvent(String userId, RegisterRequest request) {
+        UserRegisteredEvent payload = new UserRegisteredEvent(
+                userId,
+                request.username(),
+                request.email(),
+                request.firstName(),
+                request.lastName()
+        );
+        eventPublisher.publish(
+                EventTopics.USER_DOMAIN,
+                UserDomainActions.REGISTERED,
+                applicationProperties.getName(),
+                userId,
+                userId,
+                payload,
+                java.util.Map.of()
+        );
+    }
+
+    private void deleteUserQuietly(String userId) {
+        try {
+            keycloak.realm(keycloakAuthProperties.getRealm()).users().delete(userId);
+            log.warn("Rolled back Keycloak user '{}' after downstream registration failure", userId);
+        } catch (Exception cleanupError) {
+            log.error("Failed to roll back Keycloak user '{}' after registration error: {}",
+                    userId, cleanupError.getMessage(), cleanupError);
+        }
     }
 }
 

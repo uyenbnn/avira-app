@@ -1,7 +1,5 @@
 package com.avira.applicationinitializationservice.service;
 
-import jakarta.ws.rs.WebApplicationException;
-import jakarta.ws.rs.core.Response;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.keycloak.admin.client.Keycloak;
@@ -19,13 +17,11 @@ import org.keycloak.representations.idm.RoleRepresentation;
 import org.keycloak.representations.idm.UserRepresentation;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.boot.ApplicationArguments;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -61,32 +57,10 @@ class KeycloakInitializationServiceTest {
     @Mock
     private RoleScopeResource roleScopeResource;
 
-    @Mock
-    private ApplicationArguments args;
-
-    @Test
-    void shouldIncludeHttp401DetailsInFailFastException() {
-        KeycloakInitializationService service = new KeycloakInitializationService(keycloak);
-        setProps(service, true, true);
-
-        Response unauthorized = Response.status(401)
-                .entity("{\"error\":\"unauthorized\"}")
-                .build();
-
-        when(keycloak.realms()).thenReturn(realmsResource);
-        when(realmsResource.findAll()).thenThrow(new WebApplicationException(unauthorized));
-
-        IllegalStateException ex = assertThrows(IllegalStateException.class, () -> service.run(args));
-
-        assertThat(ex.getMessage()).contains("httpStatus=401");
-        assertThat(ex.getMessage()).contains("targetRealm=avira");
-        assertThat(ex.getMessage()).contains("clientId=admin-cli");
-    }
-
     @Test
     void shouldSkipRecreateWhenAllSeedDataAlreadyExists() {
         KeycloakInitializationService service = new KeycloakInitializationService(keycloak);
-        setProps(service, false, true);
+        setProps(service);
 
         RealmRepresentation existingRealm = new RealmRepresentation();
         existingRealm.setRealm("avira");
@@ -123,7 +97,7 @@ class KeycloakInitializationServiceTest {
         when(roleMappingResource.realmLevel()).thenReturn(roleScopeResource);
         when(roleScopeResource.listAll()).thenReturn(List.of(adminRole, anonymousRole));
 
-        var response = service.initialize();
+        var response = service.initializeKeycloak();
 
         assertThat(response.realmCreated()).isFalse();
         assertThat(response.userClientCreated()).isFalse();
@@ -140,15 +114,8 @@ class KeycloakInitializationServiceTest {
         return role;
     }
 
-    private static void setProps(KeycloakInitializationService service,
-                                 boolean autoRun,
-                                 boolean failFast) {
+    private static void setProps(KeycloakInitializationService service) {
         ReflectionTestUtils.setField(service, "targetRealm", "avira");
-        ReflectionTestUtils.setField(service, "serverUrl", "http://localhost:8080");
-        ReflectionTestUtils.setField(service, "adminRealm", "master");
-        ReflectionTestUtils.setField(service, "adminClientId", "admin-cli");
-        ReflectionTestUtils.setField(service, "autoRun", autoRun);
-        ReflectionTestUtils.setField(service, "failFast", failFast);
 
         ReflectionTestUtils.setField(service, "anonymousUsername", "anonymous");
         ReflectionTestUtils.setField(service, "anonymousEmail", "anonymous@avira.local");

@@ -19,7 +19,6 @@
 
     <properties>
         <java.version>21</java.version>
-        <keycloak.version>26.0.8</keycloak.version>
     </properties>
 
     <dependencies>
@@ -44,10 +43,10 @@
             <artifactId>spring-boot-starter-oauth2-resource-server</artifactId>
         </dependency>
 
+
         <dependency>
-            <groupId>org.keycloak</groupId>
-            <artifactId>keycloak-admin-client</artifactId>
-            <version>${keycloak.version}</version>
+            <groupId>org.springframework.amqp</groupId>
+            <artifactId>spring-rabbit-stream</artifactId>
         </dependency>
 
         <dependency>

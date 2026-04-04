@@ -1,6 +1,7 @@
 package com.avira.authenticationservice.service;
 
 import com.avira.authenticationservice.dto.LoginRequest;
+import com.avira.authenticationservice.dto.LogoutRequest;
 import com.avira.authenticationservice.dto.RefreshTokenRequest;
 import com.avira.authenticationservice.dto.RegisterRequest;
 import com.avira.authenticationservice.dto.TokenResponse;
@@ -86,6 +87,15 @@ class AuthenticationOrchestrationServiceTest {
 
         assertThat(result).isEqualTo(expected);
         verify(keycloakTokenWebClient).refresh("refresh");
+    }
+
+    @Test
+    void shouldDelegateLogoutToKeycloak() {
+        LogoutRequest request = new LogoutRequest("refresh");
+
+        authenticationOrchestrationService.logout(request);
+
+        verify(keycloakTokenWebClient).logout("refresh");
     }
 
     @Test

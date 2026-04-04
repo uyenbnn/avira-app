@@ -1,9 +1,10 @@
 package com.avira.userservice.service;
 
-import com.avira.userservice.entity.User;
-import com.avira.userservice.entity.UserAuthProvider;
-import com.avira.userservice.enums.AuthProvider;
-import com.avira.userservice.repository.UserAuthProviderRepository;
+import com.avira.userservice.user.entity.User;
+import com.avira.userservice.user.entity.UserAuthProvider;
+import com.avira.userservice.user.enums.AuthProvider;
+import com.avira.userservice.user.repository.UserAuthProviderRepository;
+import com.avira.userservice.user.service.UserAuthorizationService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
