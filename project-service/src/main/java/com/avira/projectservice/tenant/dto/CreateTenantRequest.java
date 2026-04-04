@@ -10,6 +10,8 @@ public record CreateTenantRequest(
         String description,
 
         @Positive(message = "Max users must be greater than 0")
-        Integer maxUsers
+        Integer maxUsers,
+
+        Boolean authenticationEnabled
 ) {
 }

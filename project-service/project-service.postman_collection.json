@@ -1,0 +1,367 @@
+{
+  "info": {
+    "name": "Avira - Project Service",
+    "_postman_id": "avira-project-service-v2",
+    "description": "Project Service API — tenant CRUD (1 per user) and application/product CRUD (personal web app, toolbox webapp, e-commerce app). Base URL: http://localhost:10004/api",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "base_url", "value": "http://localhost:10004/api" },
+    { "key": "token", "value": "" },
+    { "key": "tenant_id", "value": "" },
+    { "key": "app_id", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "Tenants",
+      "item": [
+        {
+          "name": "Create Tenant (authenticated user, 1 per user)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var json = pm.response.json();",
+                  "if (json.id) { pm.collectionVariables.set('tenant_id', json.id); }",
+                  "pm.test('Status 201', () => pm.response.to.have.status(201));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"my-workspace\",\n  \"description\": \"My personal workspace\",\n  \"maxUsers\": 50,\n  \"authenticationEnabled\": false\n}"
+            },
+            "url": { "raw": "{{base_url}}/tenants", "host": ["{{base_url}}"], "path": ["tenants"] }
+          }
+        },
+        {
+          "name": "Get Tenant by ID",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": ["pm.test('Status 200', () => pm.response.to.have.status(200));"],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{base_url}}/tenants/{{tenant_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["tenants", "{{tenant_id}}"]
+            }
+          }
+        },
+        {
+          "name": "Get My Tenants (by owner)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{base_url}}/tenants/owner/{{owner_id}}?page=0&size=20",
+              "host": ["{{base_url}}"],
+              "path": ["tenants", "owner", "{{owner_id}}"],
+              "query": [
+                { "key": "page", "value": "0" },
+                { "key": "size", "value": "20" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get All Tenants (ADMIN only)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": ["pm.test('Status 200', () => pm.response.to.have.status(200));"],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{base_url}}/tenants?page=0&size=20",
+              "host": ["{{base_url}}"],
+              "path": ["tenants"],
+              "query": [
+                { "key": "page", "value": "0" },
+                { "key": "size", "value": "20" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Update Tenant",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"updated-workspace\",\n  \"description\": \"Updated description\",\n  \"maxUsers\": 100,\n  \"authenticationEnabled\": false\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/tenants/{{tenant_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["tenants", "{{tenant_id}}"]
+            }
+          }
+        },
+        {
+          "name": "Change Tenant Status",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{base_url}}/tenants/{{tenant_id}}/status?status=SUSPENDED",
+              "host": ["{{base_url}}"],
+              "path": ["tenants", "{{tenant_id}}", "status"],
+              "query": [{ "key": "status", "value": "SUSPENDED" }]
+            }
+          }
+        },
+        {
+          "name": "Enable Tenant Authentication (triggers Keycloak realm init)",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{base_url}}/tenants/{{tenant_id}}/authentication?enabled=true",
+              "host": ["{{base_url}}"],
+              "path": ["tenants", "{{tenant_id}}", "authentication"],
+              "query": [{ "key": "enabled", "value": "true" }]
+            }
+          }
+        },
+        {
+          "name": "Delete Tenant (soft delete)",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{base_url}}/tenants/{{tenant_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["tenants", "{{tenant_id}}"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Applications (Products)",
+      "item": [
+        {
+          "name": "Create Application - Personal Web App",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var json = pm.response.json();",
+                  "if (json.id) { pm.collectionVariables.set('app_id', json.id); }",
+                  "pm.test('Status 201', () => pm.response.to.have.status(201));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"my-portfolio\",\n  \"kind\": \"PERSONAL_WEB_APP\",\n  \"description\": \"My personal portfolio website\",\n  \"domain\": \"\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/tenants/{{tenant_id}}/applications",
+              "host": ["{{base_url}}"],
+              "path": ["tenants", "{{tenant_id}}", "applications"]
+            }
+          }
+        },
+        {
+          "name": "Create Application - Toolbox Webapp",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"my-tools\",\n  \"kind\": \"TOOLBOX_WEBAPP\",\n  \"description\": \"Internal productivity toolbox\",\n  \"domain\": \"\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/tenants/{{tenant_id}}/applications",
+              "host": ["{{base_url}}"],
+              "path": ["tenants", "{{tenant_id}}", "applications"]
+            }
+          }
+        },
+        {
+          "name": "Create Application - E-commerce App (with custom domain)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"my-shop\",\n  \"kind\": \"ECOMMERCE_APP\",\n  \"description\": \"Online store for my products\",\n  \"domain\": \"shop.mycompany.com\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/tenants/{{tenant_id}}/applications",
+              "host": ["{{base_url}}"],
+              "path": ["tenants", "{{tenant_id}}", "applications"]
+            }
+          }
+        },
+        {
+          "name": "Get Applications by Tenant",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": ["pm.test('Status 200', () => pm.response.to.have.status(200));"],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{base_url}}/tenants/{{tenant_id}}/applications?page=0&size=20",
+              "host": ["{{base_url}}"],
+              "path": ["tenants", "{{tenant_id}}", "applications"],
+              "query": [
+                { "key": "page", "value": "0" },
+                { "key": "size", "value": "20" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Application by ID",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{base_url}}/tenants/{{tenant_id}}/applications/{{app_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["tenants", "{{tenant_id}}", "applications", "{{app_id}}"]
+            }
+          }
+        },
+        {
+          "name": "Update Application",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"my-shop-v2\",\n  \"kind\": \"ECOMMERCE_APP\",\n  \"description\": \"Updated shop description\",\n  \"domain\": \"shop.mycompany.com\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/tenants/{{tenant_id}}/applications/{{app_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["tenants", "{{tenant_id}}", "applications", "{{app_id}}"]
+            }
+          }
+        },
+        {
+          "name": "Change Application Status",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{base_url}}/tenants/{{tenant_id}}/applications/{{app_id}}/status?status=INACTIVE",
+              "host": ["{{base_url}}"],
+              "path": ["tenants", "{{tenant_id}}", "applications", "{{app_id}}", "status"],
+              "query": [{ "key": "status", "value": "INACTIVE" }]
+            }
+          }
+        },
+        {
+          "name": "Delete Application (soft delete)",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{base_url}}/tenants/{{tenant_id}}/applications/{{app_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["tenants", "{{tenant_id}}", "applications", "{{app_id}}"]
+            }
+          }
+        },
+        {
+          "name": "Get All Applications - ADMIN only",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": ["pm.test('Status 200', () => pm.response.to.have.status(200));"],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{base_url}}/applications?page=0&size=20",
+              "host": ["{{base_url}}"],
+              "path": ["applications"],
+              "query": [
+                { "key": "page", "value": "0" },
+                { "key": "size", "value": "20" }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Health",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/actuator/health",
+              "host": ["{{base_url}}"],
+              "path": ["actuator", "health"]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
+

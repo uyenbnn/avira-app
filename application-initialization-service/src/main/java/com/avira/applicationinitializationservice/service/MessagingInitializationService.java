@@ -38,6 +38,7 @@ public class MessagingInitializationService {
 
 	private static final List<String> MANAGED_DOMAINS = List.of(
 			EventTopics.USER_DOMAIN,
+			EventTopics.TENANT_DOMAIN,
 			EventTopics.APPLICATION_DOMAIN
 	);
 

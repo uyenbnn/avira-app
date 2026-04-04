@@ -10,8 +10,8 @@ public record TenantResponse(
         String ownerId,
         TenantStatus status,
         Integer maxUsers,
+        Boolean authenticationEnabled,
         Instant createdAt,
         Instant updatedAt
 ) {
 }
-

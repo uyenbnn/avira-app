@@ -24,13 +24,15 @@ class MessagingInitializationServiceTest {
 	@Test
 	void shouldReportCreatedAndExistingStreams() {
 		when(topicManager.createTopic(EventTopics.USER_DOMAIN)).thenReturn(true);
+		when(topicManager.createTopic(EventTopics.TENANT_DOMAIN)).thenReturn(true);
 		when(topicManager.createTopic(EventTopics.APPLICATION_DOMAIN)).thenReturn(false);
 		when(topicManager.resolveTopicName(EventTopics.USER_DOMAIN)).thenReturn("user-domain");
+		when(topicManager.resolveTopicName(EventTopics.TENANT_DOMAIN)).thenReturn("tenant-domain");
 		when(topicManager.resolveTopicName(EventTopics.APPLICATION_DOMAIN)).thenReturn("application-domain");
 
 		InitializationResponse.MessagingInitialization response = messagingInitializationService.initializeMessaging();
 
-		assertThat(response.created()).containsExactly("user-domain");
+		assertThat(response.created()).containsExactly("user-domain", "tenant-domain");
 		assertThat(response.existing()).containsExactly("application-domain");
 	}
 }

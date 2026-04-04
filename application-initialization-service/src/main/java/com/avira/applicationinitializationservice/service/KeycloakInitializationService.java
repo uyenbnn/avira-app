@@ -2,6 +2,8 @@ package com.avira.applicationinitializationservice.service;
 
 import com.avira.applicationinitializationservice.dto.InitializationResponse;
 import com.avira.commonlib.constants.UserRoles;
+import com.avira.commonlib.messaging.tenant.TenantAuthenticationEnabledEvent;
+import com.avira.commonlib.messaging.tenant.TenantCreatedEvent;
 import jakarta.ws.rs.core.Response;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -56,6 +58,9 @@ public class KeycloakInitializationService {
     @Value("${keycloak.seed.admin-client.realm-management-roles:view-users,query-users,manage-users,view-realm}")
     private List<String> adminClientRealmManagementRoles;
 
+    @Value("${keycloak.sync.tenant-realm-prefix:tenant-}")
+    private String tenantRealmPrefix;
+
     public InitializationResponse.KeycloakInitialization initializeKeycloak() {
         boolean realmCreated = ensureRealm();
         ensureBaseRoles();
@@ -72,6 +77,41 @@ public class KeycloakInitializationService {
                 anonymousUserCreated,
                 defaultAdminUserCreated
         );
+    }
+
+    public synchronized void initializeTenantKeycloak(TenantCreatedEvent event) {
+        String previousRealm = targetRealm;
+        try {
+            targetRealm = resolveTenantRealm(event.tenantId());
+            boolean realmCreated = ensureRealm();
+            ensureBaseRoles();
+            boolean userClientCreated = ensureUserAuthClient();
+            log.info("Initialized tenant Keycloak realm='{}' tenantId={} realmCreated={} userClientCreated={}",
+                    targetRealm, event.tenantId(), realmCreated, userClientCreated);
+        } finally {
+            targetRealm = previousRealm;
+        }
+    }
+
+    public synchronized void initializeTenantKeycloak(TenantAuthenticationEnabledEvent event) {
+        String previousRealm = targetRealm;
+        try {
+            targetRealm = resolveTenantRealm(event.tenantId());
+            boolean realmCreated = ensureRealm();
+            ensureBaseRoles();
+            boolean userClientCreated = ensureUserAuthClient();
+            log.info("Initialized tenant Keycloak realm='{}' tenantId={} realmCreated={} userClientCreated={}",
+                    targetRealm, event.tenantId(), realmCreated, userClientCreated);
+        } finally {
+            targetRealm = previousRealm;
+        }
+    }
+
+    private String resolveTenantRealm(String tenantId) {
+        if (tenantId == null || tenantId.isBlank()) {
+            throw new IllegalArgumentException("tenantId is required to initialize tenant Keycloak realm");
+        }
+        return tenantRealmPrefix + tenantId;
     }
 
     private boolean ensureRealm() {

@@ -12,6 +12,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
@@ -24,8 +25,9 @@ public class TenantController {
 
     private final TenantService tenantService;
 
-    // GET /api/tenants?page=0&size=20
+    // GET /api/tenants?page=0&size=20  (admin only: list all tenants)
     @GetMapping
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Page<TenantResponse>> findAll(
             @PageableDefault(size = 20) Pageable pageable) {
         return ResponseEntity.ok(tenantService.findAll(pageable));
@@ -71,6 +73,14 @@ public class TenantController {
             @RequestParam TenantStatus status) {
         tenantService.changeStatus(id, status);
         return ResponseEntity.noContent().build();
+    }
+
+    // PATCH /api/tenants/{id}/authentication
+    @PatchMapping("/{id}/authentication")
+    public ResponseEntity<TenantResponse> setAuthentication(
+            @PathVariable String id,
+            @RequestParam boolean enabled) {
+        return ResponseEntity.ok(tenantService.enableAuthentication(id, enabled));
     }
 
     // DELETE /api/tenants/{id}

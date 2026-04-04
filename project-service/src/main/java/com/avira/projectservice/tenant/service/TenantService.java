@@ -5,16 +5,19 @@ import com.avira.commonlib.constants.TenantDomainActions;
 import com.avira.commonlib.exception.ConflictException;
 import com.avira.commonlib.exception.NotFoundException;
 import com.avira.commonlib.messaging.EventPublisher;
+import com.avira.commonlib.messaging.tenant.TenantAuthenticationEnabledEvent;
+import com.avira.commonlib.messaging.tenant.TenantCreatedEvent;
+import com.avira.commonlib.messaging.user.UserRegisteredEvent;
 import com.avira.projectservice.tenant.dto.CreateTenantRequest;
 import com.avira.projectservice.tenant.dto.TenantResponse;
 import com.avira.projectservice.tenant.dto.UpdateTenantRequest;
 import com.avira.projectservice.tenant.entity.Tenant;
 import com.avira.projectservice.tenant.enums.TenantStatus;
-import com.avira.projectservice.tenant.event.TenantCreatedEvent;
 import com.avira.projectservice.tenant.repository.TenantRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -29,6 +32,12 @@ public class TenantService {
 
     @Transactional
     public TenantResponse create(CreateTenantRequest request, String ownerId) {
+        // Enforce 1-tenant-per-user
+        Page<Tenant> existing = tenantRepository.findByOwnerId(ownerId, PageRequest.of(0, 1));
+        if (!existing.isEmpty()) {
+            throw new ConflictException("User '" + ownerId + "' already has a tenant");
+        }
+
         // Check if tenant with the same name already exists
         if (tenantRepository.findByName(request.name()).isPresent()) {
             throw new ConflictException("Tenant with name '" + request.name() + "' already exists");
@@ -40,10 +49,12 @@ public class TenantService {
                 .ownerId(ownerId)
                 .status(TenantStatus.ACTIVE)
                 .maxUsers(request.maxUsers() != null ? request.maxUsers() : 100)
+                .authenticationEnabled(Boolean.TRUE.equals(request.authenticationEnabled()))
                 .build();
 
         Tenant saved = tenantRepository.save(tenant);
-        log.info("Created tenant id={} name={} ownerId={}", saved.getId(), saved.getName(), saved.getOwnerId());
+        log.info("Created tenant id={} name={} ownerId={} authenticationEnabled={}",
+                saved.getId(), saved.getName(), saved.getOwnerId(), saved.getAuthenticationEnabled());
 
         // Publish TenantCreatedEvent
         publishTenantCreatedEvent(saved);
@@ -82,6 +93,9 @@ public class TenantService {
         if (request.maxUsers() != null && request.maxUsers() > 0) {
             tenant.setMaxUsers(request.maxUsers());
         }
+        if (request.authenticationEnabled() != null) {
+            tenant.setAuthenticationEnabled(request.authenticationEnabled());
+        }
 
         Tenant updated = tenantRepository.save(tenant);
         log.info("Updated tenant id={} name={}", updated.getId(), updated.getName());
@@ -100,6 +114,23 @@ public class TenantService {
     }
 
     @Transactional
+    public TenantResponse enableAuthentication(String id, boolean enabled) {
+        Tenant tenant = tenantRepository.findById(id)
+                .orElseThrow(() -> new NotFoundException("Tenant not found with id: " + id));
+
+        boolean wasEnabled = Boolean.TRUE.equals(tenant.getAuthenticationEnabled());
+        tenant.setAuthenticationEnabled(enabled);
+        Tenant saved = tenantRepository.save(tenant);
+        log.info("Set authenticationEnabled={} for tenant id={}", enabled, id);
+
+        if (enabled && !wasEnabled) {
+            publishTenantAuthenticationEnabledEvent(saved);
+        }
+
+        return toResponse(saved);
+    }
+
+    @Transactional
     public void delete(String id) {
         Tenant tenant = tenantRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Tenant not found with id: " + id));
@@ -109,13 +140,48 @@ public class TenantService {
         log.info("Deleted tenant id={} name={}", id, tenant.getName());
     }
 
+    /**
+     * Auto-creates a default tenant for a newly registered user.
+     * Called by {@link com.avira.projectservice.messaging.UserRegisteredEventConsumer} on user-domain.registered events.
+     * Idempotent: skips creation if a tenant already exists for the owner.
+     */
+    @Transactional
+    public void createDefaultTenantForUser(UserRegisteredEvent event) {
+        Page<Tenant> existing = tenantRepository.findByOwnerId(event.username(), PageRequest.of(0, 1));
+        if (!existing.isEmpty()) {
+            log.info("Tenant already exists for user '{}', skipping auto-creation", event.username());
+            return;
+        }
+
+        String tenantName = event.username() + "-workspace";
+        if (tenantRepository.findByName(tenantName).isPresent()) {
+            tenantName = event.username() + "-" + event.userId().substring(0, 8) + "-workspace";
+        }
+
+        Tenant tenant = Tenant.builder()
+                .name(tenantName)
+                .description("Default workspace for " + event.username())
+                .ownerId(event.username())
+                .status(TenantStatus.ACTIVE)
+                .maxUsers(100)
+                .authenticationEnabled(false)
+                .build();
+
+        Tenant saved = tenantRepository.save(tenant);
+        log.info("Auto-created default tenant id={} name={} for user={}",
+                saved.getId(), saved.getName(), event.username());
+
+        publishTenantCreatedEvent(saved);
+    }
+
     private void publishTenantCreatedEvent(Tenant tenant) {
         TenantCreatedEvent payload = new TenantCreatedEvent(
                 tenant.getId(),
                 tenant.getName(),
                 tenant.getDescription(),
                 tenant.getOwnerId(),
-                tenant.getMaxUsers()
+                tenant.getMaxUsers(),
+                tenant.getAuthenticationEnabled()
         );
 
         eventPublisher.publish(
@@ -130,6 +196,25 @@ public class TenantService {
         log.info("Published TenantCreatedEvent for tenant id={}", tenant.getId());
     }
 
+    private void publishTenantAuthenticationEnabledEvent(Tenant tenant) {
+        TenantAuthenticationEnabledEvent payload = new TenantAuthenticationEnabledEvent(
+                tenant.getId(),
+                tenant.getName(),
+                tenant.getOwnerId()
+        );
+
+        eventPublisher.publish(
+                EventTopics.TENANT_DOMAIN,
+                TenantDomainActions.AUTHENTICATION_ENABLED,
+                "project-service",
+                tenant.getId(),
+                tenant.getId(),
+                payload,
+                java.util.Map.of()
+        );
+        log.info("Published TenantAuthenticationEnabledEvent for tenant id={}", tenant.getId());
+    }
+
     private TenantResponse toResponse(Tenant tenant) {
         return new TenantResponse(
                 tenant.getId(),
@@ -138,6 +223,7 @@ public class TenantService {
                 tenant.getOwnerId(),
                 tenant.getStatus(),
                 tenant.getMaxUsers(),
+                tenant.getAuthenticationEnabled(),
                 tenant.getCreatedAt(),
                 tenant.getUpdatedAt()
         );

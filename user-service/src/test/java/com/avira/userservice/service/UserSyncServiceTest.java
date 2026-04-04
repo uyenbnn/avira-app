@@ -1,15 +1,17 @@
 package com.avira.userservice.service;
 
 import com.avira.commonlib.messaging.user.UserRegisteredEvent;
-import com.avira.userservice.dto.CreateUserRequest;
-import com.avira.userservice.dto.UserResponse;
-import com.avira.userservice.entity.User;
-import com.avira.userservice.entity.UserAuthProvider;
-import com.avira.userservice.entity.UserProfile;
-import com.avira.userservice.enums.AuthProvider;
-import com.avira.userservice.repository.UserAuthProviderRepository;
-import com.avira.userservice.repository.UserProfileRepository;
-import com.avira.userservice.repository.UserRepository;
+import com.avira.userservice.user.dto.CreateUserRequest;
+import com.avira.userservice.user.dto.UserResponse;
+import com.avira.userservice.user.entity.User;
+import com.avira.userservice.user.entity.UserAuthProvider;
+import com.avira.userservice.user.entity.UserProfile;
+import com.avira.userservice.user.enums.AuthProvider;
+import com.avira.userservice.user.enums.UserStatus;
+import com.avira.userservice.user.repository.UserAuthProviderRepository;
+import com.avira.userservice.user.repository.UserProfileRepository;
+import com.avira.userservice.user.repository.UserRepository;
+import com.avira.userservice.user.service.UserService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -114,7 +116,7 @@ class UserSyncServiceTest {
         when(userRepository.findById("domain-user-1")).thenReturn(Optional.of(user));
         when(userRepository.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        userService.changeStatus("domain-user-1", com.avira.userservice.enums.UserStatus.DISABLED);
+        userService.changeStatus("domain-user-1", UserStatus.DISABLED);
 
         verify(userRepository).save(any(User.class));
     }

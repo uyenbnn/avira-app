@@ -1,6 +1,5 @@
 Application Overview
 ----------------
-This application is designed to manage user authentication and profiles for an e-commerce platform. It consists of three main modules: Application Initialization Service, Authentication Service, and User Service. Each module has specific responsibilities and endpoints to handle various aspects of user management and authentication.   
 Application name: Avira
 
 Coding styles:

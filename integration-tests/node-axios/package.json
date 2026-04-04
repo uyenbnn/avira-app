@@ -1,0 +1,16 @@
+{
+  "name": "avira-integration-tests",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Integration tests for Avira services using Node.js and Axios",
+  "scripts": {
+    "test": "node ./tests/run-integration.js --env .env.docker",
+    "test:k3s": "node ./tests/run-integration.js --env .env.k3s",
+    "test:user-service": "node ./tests/user-service.integration.js --env .env.user-local"
+  },
+  "dependencies": {
+    "axios": "^1.11.0",
+    "dotenv": "^16.6.1"
+  }
+}
+

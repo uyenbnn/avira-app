@@ -2,6 +2,7 @@ package com.avira.commonlib.web;
 
 import com.avira.commonlib.exception.ApiErrorResponse;
 import com.avira.commonlib.exception.ConflictException;
+import com.avira.commonlib.exception.ForbiddenException;
 import com.avira.commonlib.exception.NotFoundException;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
@@ -25,6 +26,11 @@ public class CommonControllerAdvice {
     @ExceptionHandler(ConflictException.class)
     public ResponseEntity<ApiErrorResponse> handleConflict(ConflictException ex, WebRequest request) {
         return build(HttpStatus.CONFLICT, ex.getMessage(), request);
+    }
+
+    @ExceptionHandler(ForbiddenException.class)
+    public ResponseEntity<ApiErrorResponse> handleForbidden(ForbiddenException ex, WebRequest request) {
+        return build(HttpStatus.FORBIDDEN, ex.getMessage(), request);
     }
 
     private ResponseEntity<ApiErrorResponse> build(HttpStatus status, String message, WebRequest request) {

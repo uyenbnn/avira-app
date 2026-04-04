@@ -1,0 +1,42 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: authentication-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: authentication-service
+  template:
+    metadata:
+      labels:
+        app: authentication-service
+    spec:
+      containers:
+        - name: authentication-service
+          image: avira/authentication-service:local
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 10001
+          envFrom:
+            - configMapRef:
+                name: avira-app-env
+            - secretRef:
+                name: avira-app-secret
+          env:
+            - name: KEYCLOAK_TOKEN_URL
+              value: http://host.docker.internal:8080/realms/avira/protocol/openid-connect/token
+            - name: KEYCLOAK_LOGOUT_URL
+              value: http://host.docker.internal:8080/realms/avira/protocol/openid-connect/logout
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: authentication-service
+spec:
+  selector:
+    app: authentication-service
+  ports:
+    - port: 10001
+      targetPort: 10001
+

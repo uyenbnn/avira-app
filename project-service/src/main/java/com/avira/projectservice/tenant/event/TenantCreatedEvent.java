@@ -5,7 +5,8 @@ public record TenantCreatedEvent(
         String name,
         String description,
         String ownerId,
-        Integer maxUsers
+        Integer maxUsers,
+        Boolean authenticationEnabled
 ) {
 }
 

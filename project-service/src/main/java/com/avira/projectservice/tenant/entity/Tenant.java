@@ -36,6 +36,9 @@ public class Tenant {
     @Column(name = "max_users", nullable = false)
     private Integer maxUsers;
 
+    @Column(name = "authentication_enabled", nullable = false)
+    private Boolean authenticationEnabled;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
@@ -56,6 +59,9 @@ public class Tenant {
         if (this.maxUsers == null) {
             this.maxUsers = 100;
         }
+        if (this.authenticationEnabled == null) {
+            this.authenticationEnabled = false;
+        }
     }
 
     @PreUpdate
@@ -63,4 +69,3 @@ public class Tenant {
         this.updatedAt = Instant.now();
     }
 }
-
