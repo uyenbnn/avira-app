@@ -13,10 +13,11 @@
 
     <modules>
         <module>common-lib</module>
-        <module>user-service</module>
-        <module>authentication-service</module>
-        <module>application-initialization-service</module>
-        <module>project-service</module>
+
+        <module>iam-service</module>
+        <module>platform-service</module>
+        <module>application-service</module>
+
     </modules>
 
 </project>

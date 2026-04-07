@@ -1,0 +1,45 @@
+_format_version: "3.0"
+_transform: true
+
+services:
+  - name: authentication-service
+    url: http://host.docker.internal:10001
+    routes:
+      - name: authentication-service-auth-routes
+        paths:
+          - /api/auth
+        strip_path: false
+
+  - name: user-service
+    url: http://host.docker.internal:10002
+    routes:
+      - name: user-service-user-routes
+        paths:
+          - /api/users
+        strip_path: false
+
+  - name: project-service
+    url: http://host.docker.internal:10004
+    routes:
+      - name: project-service-tenant-routes
+        paths:
+          - /api/tenants
+        strip_path: false
+      - name: project-service-application-routes
+        paths:
+          - /api/applications
+        strip_path: false
+
+  - name: application-initialization-service
+    url: http://host.docker.internal:10000
+    routes:
+      - name: application-initialization-service-init-routes
+        paths:
+          - /api/init
+        strip_path: false
+      - name: application-initialization-service-docs-routes
+        paths:
+          - /api/swagger-ui
+          - /api/v3/api-docs
+        strip_path: false
+

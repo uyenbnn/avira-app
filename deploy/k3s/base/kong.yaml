@@ -1,0 +1,151 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kong-config
+  namespace: default
+data:
+  kong.yml: |
+    _format_version: "3.0"
+    _transform: true
+
+    services:
+      - name: authentication-service
+        url: http://authentication-service.avira.svc.cluster.local:10001
+        routes:
+          - name: authentication-service-auth-routes
+            paths:
+              - /api/auth
+            strip_path: false
+
+      - name: user-service
+        url: http://user-service.avira.svc.cluster.local:10002
+        routes:
+          - name: user-service-user-routes
+            paths:
+              - /api/users
+            strip_path: false
+
+      - name: project-service
+        url: http://project-service.avira.svc.cluster.local:10004
+        routes:
+          - name: project-service-tenant-routes
+            paths:
+              - /api/tenants
+            strip_path: false
+          - name: project-service-app-routes
+            paths:
+              - /api/applications
+            strip_path: false
+
+      - name: application-initialization-service
+        url: http://application-initialization-service.avira.svc.cluster.local:10000
+        routes:
+          - name: init-service-routes
+            paths:
+              - /api/init
+            strip_path: false
+
+      - name: administration-service
+        url: http://administration-service.avira.svc.cluster.local:10005
+        routes:
+          - name: administration-service-routes
+            paths:
+              - /api/admin
+            strip_path: false
+
+      - name: business-service
+        url: http://business-service.avira.svc.cluster.local:10006
+        routes:
+          - name: business-service-routes
+            paths:
+              - /api/business
+            strip_path: false
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kong
+  namespace: default
+spec:
+  type: LoadBalancer
+  selector:
+    app: kong
+  ports:
+    - name: proxy
+      port: 8000
+      targetPort: 8000
+      protocol: TCP
+    - name: admin
+      port: 8001
+      targetPort: 8001
+      protocol: TCP
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kong
+  namespace: default
+  labels:
+    app: kong
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kong
+  template:
+    metadata:
+      labels:
+        app: kong
+    spec:
+      containers:
+      - name: kong
+        image: kong:3.7
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 8000
+          name: proxy
+        - containerPort: 8001
+          name: admin
+        env:
+        - name: KONG_DATABASE
+          value: "off"
+        - name: KONG_DECLARATIVE_CONFIG
+          value: /etc/kong/kong.yml
+        - name: KONG_PROXY_ACCESS_LOG
+          value: /dev/stdout
+        - name: KONG_ADMIN_ACCESS_LOG
+          value: /dev/stdout
+        - name: KONG_PROXY_ERROR_LOG
+          value: /dev/stderr
+        - name: KONG_ADMIN_ERROR_LOG
+          value: /dev/stderr
+        - name: KONG_ADMIN_LISTEN
+          value: "0.0.0.0:8001"
+        volumeMounts:
+        - name: kong-config
+          mountPath: /etc/kong
+          readOnly: true
+        livenessProbe:
+          httpGet:
+            path: /status
+            port: 8001
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /status
+            port: 8001
+          initialDelaySeconds: 10
+          periodSeconds: 5
+        resources:
+          requests:
+            cpu: 100m
+            memory: 256Mi
+          limits:
+            cpu: 500m
+            memory: 512Mi
+      volumes:
+      - name: kong-config
+        configMap:
+          name: kong-config
+

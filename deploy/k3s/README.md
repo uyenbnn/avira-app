@@ -47,7 +47,7 @@ Open 4 terminals:
 ```bash
 kubectl -n avira port-forward svc/application-initialization-service 18080:10000
 kubectl -n avira port-forward svc/authentication-service 18081:10001
-kubectl -n avira port-forward svc/user-service 18082:10000
+kubectl -n avira port-forward svc/user-service 18082:10002
 kubectl -n avira port-forward svc/project-service 18084:10004
 ```
 

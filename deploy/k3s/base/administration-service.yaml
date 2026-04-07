@@ -1,0 +1,48 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: administration-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: administration-service
+  template:
+    metadata:
+      labels:
+        app: administration-service
+    spec:
+      containers:
+        - name: administration-service
+          image: avira/administration-service:local
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 10005
+          envFrom:
+            - configMapRef:
+                name: avira-app-env
+            - secretRef:
+                name: avira-app-secret
+          env:
+            - name: DB_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: avira-app-env
+                  key: DB_URL_ADMINISTRATION
+            - name: SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI
+              valueFrom:
+                configMapKeyRef:
+                  name: avira-app-env
+                  key: KEYCLOAK_ISSUER_URI
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: administration-service
+spec:
+  selector:
+    app: administration-service
+  ports:
+    - port: 10005
+      targetPort: 10005
+

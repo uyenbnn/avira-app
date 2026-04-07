@@ -21,6 +21,9 @@ async function request(client, config, okStatusCodes) {
     }
     return response;
   } catch (error) {
+    if (error.response && okStatusCodes && okStatusCodes.includes(error.response.status)) {
+      return error.response;
+    }
     const details = error.response
       ? `status=${error.response.status} body=${JSON.stringify(error.response.data)}`
       : error.message;

@@ -13,4 +13,9 @@ images:
     newTag: local
   - name: avira/application-initialization-service
     newTag: local
+  - name: avira/administration-service
+    newTag: local
+  - name: avira/business-service
+    newTag: local
+
 

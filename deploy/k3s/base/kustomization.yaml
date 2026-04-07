@@ -11,4 +11,7 @@ resources:
   - user-service.yaml
   - project-service.yaml
   - application-initialization-service.yaml
+  - administration-service.yaml
+  - business-service.yaml
+  - kong.yaml
 
