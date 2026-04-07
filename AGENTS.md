@@ -1,5 +1,13 @@
 # AGENTS Guide for `avira-app`
 
+Working flow for development:
+- Update code in (*-service or *-lib)
+- Run Unit tests 
+- Create or update deploy in folder ./deploy
+- Deploy to k3s local
+- Create or update integration test using axios in integration-tests/
+- Run integration tests
+
 ## 1. System Overview
 
 This repository implements a **multi-tenant SaaS platform** where:
@@ -31,6 +39,7 @@ IMPORTANT:
 
 ### 2.1 iam-service (Identity & Access Management)
 structure:
+- `src/main/java/com/avira/iam/init-service` (for Keycloak realm initialization and provisioning, stream init (rabbitmq stream or kafka))
 - `src/main/java/com/avira/iam/authentication-service` (for platform authentication logic, e.g., Keycloak integration)
 - `src/main/java/com/avira/iam/user-service` (for platform user management)
 - `src/main/java/com/avira/iam/client-service` (for Keycloak client management)

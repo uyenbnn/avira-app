@@ -17,6 +17,7 @@ function loadConfig() {
     projectBaseUrl: process.env.PROJECT_BASE_URL,
     initBaseUrl: process.env.INIT_BASE_URL,
     userBaseUrl: process.env.USER_BASE_URL || '',
+    iamBaseUrl: process.env.IAM_BASE_URL || '',
     testUserPassword: process.env.TEST_USER_PASSWORD || 'Test123!',
     adminEmail: process.env.ADMIN_EMAIL || '',
     adminPassword: process.env.ADMIN_PASSWORD || '',

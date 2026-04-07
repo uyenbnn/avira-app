@@ -2,44 +2,23 @@ _format_version: "3.0"
 _transform: true
 
 services:
-  - name: authentication-service
-    url: http://host.docker.internal:10001
+  - name: iam-service
+    url: http://host.docker.internal:8081
     routes:
-      - name: authentication-service-auth-routes
+      - name: iam-service-auth-routes
         paths:
-          - /api/auth
+          - /api/iam/auth
         strip_path: false
-
-  - name: user-service
-    url: http://host.docker.internal:10002
-    routes:
-      - name: user-service-user-routes
+      - name: iam-service-init-routes
         paths:
-          - /api/users
+          - /api/iam/init
         strip_path: false
-
-  - name: project-service
-    url: http://host.docker.internal:10004
-    routes:
-      - name: project-service-tenant-routes
+      - name: iam-service-realms-routes
         paths:
-          - /api/tenants
+          - /api/iam/realms
         strip_path: false
-      - name: project-service-application-routes
+      - name: iam-service-users-routes
         paths:
-          - /api/applications
-        strip_path: false
-
-  - name: application-initialization-service
-    url: http://host.docker.internal:10000
-    routes:
-      - name: application-initialization-service-init-routes
-        paths:
-          - /api/init
-        strip_path: false
-      - name: application-initialization-service-docs-routes
-        paths:
-          - /api/swagger-ui
-          - /api/v3/api-docs
+          - /api/iam/users
         strip_path: false
 

@@ -20,6 +20,7 @@ DATABASES=(
     project_service
     administration_service
     business_service
+    iam_service
 )
 
 for DB in "${DATABASES[@]}"; do

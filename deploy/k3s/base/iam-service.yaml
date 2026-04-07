@@ -1,58 +1,59 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: project-service
+  name: iam-service
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: project-service
+      app: iam-service
   template:
     metadata:
       labels:
-        app: project-service
+        app: iam-service
     spec:
       containers:
-        - name: project-service
-          image: avira/project-service:local
+        - name: iam-service
+          image: avira/iam-service:local
           imagePullPolicy: IfNotPresent
           ports:
-            - containerPort: 10004
+            - containerPort: 10003
           envFrom:
             - configMapRef:
                 name: avira-app-env
             - secretRef:
                 name: avira-app-secret
           env:
-            - name: SPRING_DATASOURCE_URL
+            - name: IAM_SERVER_PORT
+              value: "10003"
+            - name: IAM_DB_URL
               valueFrom:
                 configMapKeyRef:
                   name: avira-app-env
-                  key: DB_URL_PROJECT
-            - name: SPRING_DATASOURCE_USERNAME
+                  key: DB_URL_IAM
+            - name: IAM_DB_USERNAME
               valueFrom:
                 configMapKeyRef:
                   name: avira-app-env
                   key: DB_USERNAME
-            - name: SPRING_DATASOURCE_PASSWORD
+            - name: IAM_DB_PASSWORD
               valueFrom:
                 secretKeyRef:
                   name: avira-app-secret
                   key: DB_PASSWORD
-            - name: SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI
-              valueFrom:
-                configMapKeyRef:
-                  name: avira-app-env
-                  key: KEYCLOAK_ISSUER_URI
+            - name: KEYCLOAK_TOKEN_URL
+              value: http://host.docker.internal:8080/realms/avira-platform/protocol/openid-connect/token
+            - name: KEYCLOAK_LOGOUT_URL
+              value: http://host.docker.internal:8080/realms/avira-platform/protocol/openid-connect/logout
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: project-service
+  name: iam-service
 spec:
   selector:
-    app: project-service
+    app: iam-service
   ports:
-    - port: 10004
-      targetPort: 10004
+    - port: 10003
+      targetPort: 10003
 

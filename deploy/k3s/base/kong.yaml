@@ -9,56 +9,24 @@ data:
     _transform: true
 
     services:
-      - name: authentication-service
-        url: http://authentication-service.avira.svc.cluster.local:10001
+      - name: iam-service
+        url: http://iam-service.avira.svc.cluster.local:10003
         routes:
-          - name: authentication-service-auth-routes
+          - name: iam-service-auth-routes
             paths:
-              - /api/auth
+              - /api/iam/auth
             strip_path: false
-
-      - name: user-service
-        url: http://user-service.avira.svc.cluster.local:10002
-        routes:
-          - name: user-service-user-routes
+          - name: iam-service-init-routes
             paths:
-              - /api/users
+              - /api/iam/init
             strip_path: false
-
-      - name: project-service
-        url: http://project-service.avira.svc.cluster.local:10004
-        routes:
-          - name: project-service-tenant-routes
+          - name: iam-service-realms-routes
             paths:
-              - /api/tenants
+              - /api/iam/realms
             strip_path: false
-          - name: project-service-app-routes
+          - name: iam-service-users-routes
             paths:
-              - /api/applications
-            strip_path: false
-
-      - name: application-initialization-service
-        url: http://application-initialization-service.avira.svc.cluster.local:10000
-        routes:
-          - name: init-service-routes
-            paths:
-              - /api/init
-            strip_path: false
-
-      - name: administration-service
-        url: http://administration-service.avira.svc.cluster.local:10005
-        routes:
-          - name: administration-service-routes
-            paths:
-              - /api/admin
-            strip_path: false
-
-      - name: business-service
-        url: http://business-service.avira.svc.cluster.local:10006
-        routes:
-          - name: business-service-routes
-            paths:
-              - /api/business
+              - /api/iam/users
             strip_path: false
 ---
 apiVersion: v1

@@ -4,11 +4,14 @@
   "private": true,
   "description": "Integration tests for Avira services using Node.js and Axios",
   "scripts": {
-
+    "test:iam:docker": "node tests/iam-service.integration.js --env .env.docker",
+    "test:iam:kong": "node tests/iam-service.integration.js --env .env.kong",
+    "test:iam:k3s": "node tests/iam-service.integration.js --env .env.k3s"
   },
   "dependencies": {
     "axios": "^1.11.0",
-    "dotenv": "^16.6.1"
+    "dotenv": "^16.6.1",
+    "uuid": "^11.1.0"
   }
 }
 
