@@ -41,6 +41,18 @@ K3s port-forward profile:
 npm run test:k3s
 ```
 
+Kong gateway profile:
+
+```bash
+npm run test:kong
+```
+
+From repo root, run a single helper script (start infra + verify endpoints + run `test:kong`; expects Kong from K3s port-forward):
+
+```bash
+powershell -ExecutionPolicy Bypass -File D:/work/avira-app/scripts/run-local.ps1
+```
+
 User-service authorization + CRUD scenario (admin list users, self-only access, admin CRUD):
 
 ```bash

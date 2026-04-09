@@ -1,0 +1,24 @@
+_format_version: "3.0"
+_transform: true
+
+services:
+  - name: iam-service
+    url: http://host.docker.internal:8081
+    routes:
+      - name: iam-service-auth-routes
+        paths:
+          - /api/iam/auth
+        strip_path: false
+      - name: iam-service-init-routes
+        paths:
+          - /api/iam/init
+        strip_path: false
+      - name: iam-service-realms-routes
+        paths:
+          - /api/iam/realms
+        strip_path: false
+      - name: iam-service-users-routes
+        paths:
+          - /api/iam/users
+        strip_path: false
+

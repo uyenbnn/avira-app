@@ -1,75 +1,423 @@
 # AGENTS Guide for `avira-app`
 
-## Repo Shape and Service Boundaries
-- Maven multi-module root (`pom.xml`) with 5 modules: `common-lib`, `user-service`, `authentication-service`, `application-initialization-service`, `project-service`.
-- `authentication-service` is stateless identity API (no DB autoconfig; see `AuthenticationServiceApplication`). It owns auth/token flows and Keycloak role updates.
-- `user-service` owns domain profile data (JPA + PostgreSQL) and JWT-protected user/profile endpoints.
-- `application-initialization-service` owns bootstrap/seed lifecycle for Keycloak and messaging (`POST /init`, `POST /init/keycloak`, `POST /init/messaging`, alias `POST /init/streams`, plus optional startup autorun).
-- `common-lib` is the shared contract layer (API path constants, migration headers, role constants, WebClient wrappers, messaging abstractions, event topics/actions).
-- `project-service` manages multi-tenant configurations (JPA + PostgreSQL) and the full application/product lifecycle beneath each tenant. Event-driven: publishes `TenantCreatedEvent` for application-initialization-service bootstrap and `ApplicationCreatedEvent` on `EventTopics.APPLICATION_DOMAIN`. Also **consumes** `UserRegisteredEvent` to auto-create a default tenant per new user.
+Working flow for development:
+- Update code in (*-service or *-lib)
+- Run Unit tests 
+- Create or update deploy in folder ./deploy
+- Deploy to k3s local
+- Create or update integration test using axios in integration-tests/
+- Run integration tests
 
-## Current Architecture (Important Historical Context)
-- Read `CHANGELOG.md` first: this repo is mid-migration from legacy user-service auth flows to dedicated `authentication-service`.
-- Practical result: treat `authentication-service` as the source of truth for identity operations; avoid reintroducing auth logic into `user-service`.
-- Keycloak bootstrap logic exists in both `user-service` (`KeycloakRealmBootstrapService`) and `application-initialization-service` (`KeycloakInitializationService`); newer phases move ownership to initialization service.
-- Registration is now split across services: `authentication-service` provisions the Keycloak identity (`KeycloakUserRegistrationService`) and publishes `UserRegisteredEvent`, while `user-service` materializes the local record from that event (`UserRegisteredEventConsumer`, `UserService#createFromRegisteredEvent`).
-- Tenancy bootstrap is event-driven: `project-service` creates tenant records and publishes `TenantCreatedEvent` to `EventTopics.TENANT_DOMAIN` for `application-initialization-service` consumption (for Keycloak realm/client per-tenant setup in future phases).
-- **1 user → 1 tenant (enforced):** `TenantService.create()` guards with `findByOwnerId` and throws `ConflictException` if the owner already has a tenant. `TenantService.createDefaultTenantForUser(UserRegisteredEvent)` auto-creates an `{username}-workspace` tenant when a user registers (idempotent — skips if tenant already exists).
-- **1 tenant → many applications:** `Application` entity lives under `project-service/application/` with `tenantId` FK to `tenants`. Each application has a `kind` (`PERSONAL_WEB_APP`, `TOOLBOX_WEBAPP`, `ECOMMERCE_APP`), optional custom `domain`, and a generated sub-domain (`{app-name}.{username}.avira.io`) when no domain is supplied.
+## 1. System Overview
 
-## API/Path Conventions Specific to This Repo
-- `authentication-service`, `user-service`, `project-service`, and `application-initialization-service` all set `server.servlet.context-path=/api`; controller mappings are relative to `/api` externally.
-- Auth endpoints are implemented in `authentication-service` at controller-local `/auth/*` (`AuthenticationController`), so the external paths are `/api/auth/*`; this includes `PUT /api/auth/users/{userId}/roles` for Keycloak realm-role updates.
-- Shared auth constants exist in `common-lib` (`AuthApiPaths`, `AuthMigrationHeaders`); prefer these over new hardcoded strings.
-- User endpoints use `/api/users` (`UserController`, `UserProfileController`) and `UserApiPaths.USERS_BASE` in security config.
-- Tenant endpoints use `/api/tenants` (`TenantController`). `GET /api/tenants` (list all) is **ADMIN-only** via `@PreAuthorize("hasRole('ADMIN')")`.
-- Application endpoints are nested: `/api/tenants/{tenantId}/applications` (`ApplicationController`). Admin can list all applications across all tenants via `GET /api/applications` (`@PreAuthorize("hasRole('ADMIN')")`).
-- Initialization endpoints are controller-local `/init`, `/init/keycloak`, `/init/messaging` (plus `/init/streams` alias), so the external paths are `/api/init*`.
-- Keycloak roles are centralized in `common-lib` `UserRoles` (`USER`, `ADMIN`, `SELLER`, `BUYER`, `ANONYMOUS`, plus `UserRoles.ALL`).
+This repository implements a **multi-tenant SaaS platform** where:
 
-## Integration Points You Must Preserve
-- Keycloak Admin API is used directly by:
-  - `authentication-service` (`KeycloakUserRegistrationService`, `KeycloakUserRoleService`)
-  - `application-initialization-service` (`KeycloakInitializationService`)
-  - `user-service` (`KeycloakAdminClient`, legacy/bootstrap operations)
-- Token login/refresh go through `KeycloakTokenWebClient` (`common-lib`) using form-encoded grant requests.
-- Both `user-service` and `project-service` map Keycloak `realm_access.roles` to Spring authorities via `SecurityConfig#jwtAuthenticationConverter`; role naming must stay aligned.
-- The cross-service registration flow depends on messaging: `authentication-service` publishes `UserRegisteredEvent` through `EventPublisher` on `EventTopics.USER_DOMAIN` / `UserDomainActions.REGISTERED`. Both `user-service` and `project-service` consume it via their own `UserDomainEventStreamListener` + `UserRegisteredEventConsumer`.
-- The cross-service tenant bootstrap flow depends on messaging: `project-service` publishes `TenantCreatedEvent` through `EventPublisher` on `EventTopics.TENANT_DOMAIN` / `TenantDomainActions.CREATED`, and `application-initialization-service` will consume it for per-tenant Keycloak realm/client setup (future phases).
-- `project-service` publishes `ApplicationCreatedEvent` on `EventTopics.APPLICATION_DOMAIN` / `ApplicationDomainActions.CREATED` when a new application is created.
-- `application-initialization-service` messaging bootstrap manages stream/topic creation through `TopicManager` for `EventTopics.USER_DOMAIN`, `EventTopics.TENANT_DOMAIN`, and `EventTopics.APPLICATION_DOMAIN`; when adding a new domain event stream, update `common-lib` constants and initialization bootstrap together.
+* Users register and create tenants (companies)
+* Tenants create applications
+* Each application can define its **own authentication mechanism**
 
-## Local Dev Workflow (Verified + Discoverable)
-- Infra: `docker-compose.yml` starts Postgres (5455), RabbitMQ (5672/15672/5552), Keycloak (8080).
-- Build all modules from root:
-```bash
-mvn -f "D:\work\avira-app\pom.xml" clean install
-```
-- Fast module test loop (verified in this workspace):
-```bash
-mvn -f "D:\work\avira-app\pom.xml" -pl authentication-service -am test
-mvn -f "D:\work\avira-app\pom.xml" -pl project-service -am test
-```
-- Run modules individually with wrappers from each module folder (`mvnw.cmd spring-boot:run`).
-- Postman collection for project-service: `project-service/project-service.postman_collection.json`.
+Stack:
 
-## Gotchas That Frequently Break Changes
-- Port overlap in defaults: `user-service`, `project-service`, and `application-initialization-service` may share port `10000`; override in local runs (`project-service` uses `10004` by default).
-- `authentication-service` expects `keycloak.auth.realm=avira` and token URL defaults to `http://localhost:8080/realms/avira/...`; bootstrap realm/client first.
-- Input role updates in auth are validated strictly against `UserRoles.ALL` (`KeycloakUserRoleService`), so new managed roles require updating `common-lib` first.
-- `user-service` method security uses `@userAuthorization.canAccessUser(...)`; preserve this bean name when refactoring.
-- Remember the `/api` servlet context path when tracing routes; `@RequestMapping("/auth")` and `@RequestMapping("/init")` and `@RequestMapping("/tenants")` are not the full external URLs.
-- `application-initialization-service` auto-run now executes both Keycloak and messaging bootstrap through `InitializationOrchestrationService`; use `/api/init/keycloak` or `/api/init/messaging` when you need to retry only one side.
-- `project-service` requires `@EnableConfigurationProperties({ApplicationProperties.class})` on `ProjectServiceApplication` to inject `spring.application.name` into the RabbitMQ Stream consumer name.
-- `project-service` messaging is disabled by default (`avira.messaging.enabled=false` unless `AVIRA_MESSAGING_ENABLED=true`). The `UserDomainEventStreamListener` requires `avira.messaging.enabled=true` and `avira.messaging.provider=rabbitmq-stream` to activate.
-- `ForbiddenException` is now in `common-lib` and handled by `CommonControllerAdvice` (→ HTTP 403). Use it in service layer ownership checks instead of `ResponseStatusException`.
-- When adding a consumer for an existing stream (e.g., adding `project-service` consuming `user-domain`), the stream must already exist (created by `application-initialization-service`). Start `application-initialization-service` first and call `POST /api/init/messaging`.
+* Spring Boot microservices
+* Keycloak (platform identity only)
+* PostgreSQL
+* Kong API Gateway
+* k3s deployment
 
-## Test Patterns in This Codebase
-- Unit tests are JUnit 5 + Mockito, mostly direct service/controller tests (see `authentication-service/src/test/java/...`).
-- Bootstrap services are tested via mocked Keycloak resources and `ReflectionTestUtils` property injection.
-- Messaging/bootstrap changes are covered with focused unit tests too: see `application-initialization-service` controller/orchestration tests and `MessagingInitializationServiceTest` with mocked `TopicManager`.
-- Event-driven registration is unit-tested by verifying `EventPublisher.publish(...)` in `authentication-service` (`KeycloakUserRegistrationServiceTest`); follow that pattern for new domain events.
-- Tenant CRUD, event publishing, 1-tenant-per-user guard, and default tenant auto-creation are unit-tested via `TenantServiceTest` with mocked repository and `EventPublisher`; see `project-service` for the pattern.
-- Application CRUD, ownership guard (`ForbiddenException`), domain conflict, and event publishing are unit-tested via `ApplicationServiceTest` in `project-service`; follow that pattern for any new sub-resource.
-- For behavior changes, add focused tests near touched service/controller rather than broad integration-only coverage.
+IMPORTANT:
+- Update this document or create new document in ./docs as needed when new features or services are added for future reference.
+- Update SKILLS.md and DOD.md when new coding conventions or definition of done criteria are introduced for future reference.
+- Always follow the latest conventions and criteria defined in SKILLS.md and DOD.md when implementing new features or services.
+- This document serves as a high-level architectural overview and guide for the implementation of the Avira application. It outlines the structure, responsibilities, and constraints of each service, as well as the overall design principles and patterns to be followed throughout the development process.
+- The goal is to ensure a clear separation of concerns, maintainability, and scalability of the application while adhering to best practices in software development and multi-tenancy design.
+- The top require for coding is easiest to understand and maintain, not the shortest code. Always prioritize readability and maintainability over clever or complex solutions.
+---
+
+## 2. Services
+
+### 2.1 iam-service (Identity & Access Management)
+structure:
+- `src/main/java/com/avira/iam/init-service` (for Keycloak realm initialization and provisioning, stream init (rabbitmq stream or kafka))
+- `src/main/java/com/avira/iam/authentication-service` (for platform authentication logic, e.g., Keycloak integration)
+- `src/main/java/com/avira/iam/user-service` (for platform user management)
+- `src/main/java/com/avira/iam/client-service` (for Keycloak client management)
+- `src/main/java/com/avira/iam/role-service` (for role and permission management)
+- `src/main/java/com/avira/iam/permission-service` (for data transfer objects)
+
+Each module contains:
+- `controller` (for REST endpoints)
+- `service` (for business logic)
+- `repository` (for database interactions)
+- `dto` (for data transfer objects)
+- `config` (for Keycloak and security configurations)
+- `exception` (for custom exceptions)
+- `mapper` (for mapping between entities and DTOs)
+- `util` (for utility classes and constants)
+- `integration` (for Keycloak API clients and integration logic)
+- `event` (for handling events related to user and client management, support for rabbitmq stream or kafka)
+
+Responsibilities:
+
+* Integrate with Keycloak Admin API
+* Initialize Keycloak (realm, clients, roles)
+* Manage platform users
+* Assign roles and permissions
+* Manage Keycloak clients (public + confidential)
+
+Key Rules:
+
+- Default: SINGLE shared realm (avira-platform)
+- Support dedicated realm per tenant (enterprise mode)
+- Realm creation MUST be handled by iam-service only
+- application-service MUST NOT create or manage realms
+
+Each tenant defines identity_mode:
+
+SHARED_REALM:
+- Uses global realm
+- Tenant isolation via tenant_id claim
+
+DEDICATED_REALM:
+- Own Keycloak realm
+- Full identity isolation
+- Supports custom IdP
+
+iam-service MUST route all Keycloak operations based on tenant.identity_mode
+
+Anti-Patterns
+❌ Blindly creating realm per tenant
+❌ application-service managing Keycloak
+❌ Using realm as tenant identifier
+
+Critical Implementation Rule:
+- Introduce:
+  - interface RealmResolver {
+        String resolveRealm(String tenantId);
+    }
+
+Realistic Warning:
+Even with hybrid:
+
+Dedicated realm tenants are expensive
+    Limit them:
+     - pricing tier
+     - manual approval
+
+---
+
+### 2.2 platform-service (Control Plane)
+
+permission:
+- Only platform admins can manage tenants and applications
+
+structure:
+- `src/main/java/com/avira/platform/tenant-service` (for tenant management)
+- `src/main/java/com/avira/platform/application-service` (for application management)
+- `src/main/java/com/avira/platform/configuration-service` (for application configuration management)
+- `src/main/java/com/avira/platform/subscription-service` (for subscription and billing management)
+- `src/main/java/com/avira/platform/ui-template-service` (for UI template management)
+- `src/main/java/com/avira/platform/communication-service` (for email/SMS notifications)
+- `src/main/java/com/avira/platform/audit-service` (for audit logging and monitoring)
+- `src/main/java/com/avira/platform/analytics-service` (for analytics and reporting)
+
+
+Each module contains:
+- `controller` (for REST endpoints)
+- `service` (for business logic)
+- `repository` (for database interactions)
+- `dto` (for data transfer objects)
+- `config` (for Keycloak and security configurations)
+- `exception` (for custom exceptions)
+- `mapper` (for mapping between entities and DTOs)
+- `util` (for utility classes and constants)
+- `integration` (for Keycloak API clients and integration logic)
+- `event` (for handling events related to user and client management, support for rabbitmq stream or kafka)
+
+Responsibilities:
+
+* Manage tenants (companies)
+* Manage applications
+* Store application configuration
+* Define authentication mode per application
+
+Entities:
+
+* Tenant
+* Application
+
+Constraints:
+
+* No authentication execution logic
+* No app user management
+* No runtime logic
+
+---
+
+### 2.3 application-service (Runtime & App Domain)
+
+structure:
+- `src/main/java/com/avira/application/administration-service` (for application administration, e.g., user management, role management)
+- `src/main/java/com/avira/application/authentication-service` (for application authentication logic, e.g., strategy pattern implementations)
+- `src/main/java/com/avira/application/business-logic-service` (for application-specific business logic and operations)
+- `src/main/java/com/avira/application/configuration-service` (for application-specific configuration management)
+- `src/main/java/com/avira/application/notification-service` (for application-specific notifications and alerts)
+- `src/main/java/com/avira/application/subscription-service` (for application-specific subscription and billing management)
+- `src/main/java/com/avira/application/integration-service` (for integrating with external services and APIs)
+
+Each module contains:
+- `controller` (for REST endpoints)
+- `service` (for business logic)
+- `repository` (for database interactions)
+- `dto` (for data transfer objects)
+- `config` (for Keycloak and security configurations)
+- `exception` (for custom exceptions)
+- `mapper` (for mapping between entities and DTOs)
+- `util` (for utility classes and constants)
+- `integration` (for Keycloak API clients and integration logic)
+- `event` (for handling events related to user and client management, support for rabbitmq stream or kafka)
+
+Responsibilities:
+
+- Manage application users
+- Execute application logic
+- Handle application-level authentication
+- Issue application JWT tokens
+
+Constraints:
+
+- MUST NOT use Keycloak Admin API
+- MUST NOT create or manage realms
+- MUST NOT manage platform users
+
+---
+
+common-lib:
+description:
+- Common module contains shared utilities, constants, and configurations used across the authentication and user services.
+- It promotes code reusability and maintainability by centralizing common functionalities.
+- No database
+- Contains USER_ROLE constant for application, suggest for e-commerce application, we will have 3 user roles: admin, seller, and buyer. We can add more roles in the future if needed.
+components:
+- Utilities: "Helper functions and classes for common tasks such as error handling, logging, and data validation."
+- Constants: "Shared constants used across services, such as status codes, error messages, and configuration values."
+- Configurations: "Centralized configuration management for database connections, API endpoints, and other settings."
+- WebClient: "A shared web client for making HTTP requests to external services, such as Keycloak for synchronize data between services."
+- DTOs: "Data Transfer Objects used for defining the structure of data exchanged between services and clients."
+- Exceptions: "Custom exception classes for handling specific error scenarios in a consistent manner across services."
+- Middleware: "Shared middleware components for request processing, such as authentication and logging."
+- Services: "Shared services that provide common functionalities, such as email notifications or caching mechanisms."
+- RabbitMQ: "Shared configuration and utilities for integrating RabbitMQ for asynchronous communication between services."
+- RabbitMq Stream: "Shared configuration and utilities for integrating RabbitMQ Stream for high-throughput messaging between services."
+
+
+---------------
+
+3. Identity Model
+   3.1 Platform Identity (Keycloak)
+
+Using Keycloak
+
+Used for:
+
+platform login
+tenant ownership
+
+Managed via iam-service only.
+
+3.2 Application Identity
+Each application has isolated users
+Managed inside application-service
+Stored in PostgreSQL
+Independent from platform users
+4. Tenant Identity Strategy (Hybrid)
+
+Each tenant MUST define identity_mode:
+
+SHARED_REALM
+DEDICATED_REALM
+4.1 SHARED_REALM (Default)
+Uses global realm: avira-platform
+Tenant isolation via:
+tenant_id (JWT claim)
+roles/groups
+4.2 DEDICATED_REALM (Enterprise)
+Each tenant has its own realm:
+tenant_{tenantId}
+Full identity isolation
+Supports:
+custom IdP
+custom login flows
+4.3 Tenant Schema
+tenant
+- id UUID
+- name TEXT
+- identity_mode TEXT
+- realm_name TEXT
+5. Realm Resolution (Critical)
+
+iam-service MUST implement:
+
+public interface RealmResolver {
+String resolveRealm(String tenantId);
+}
+
+Behavior:
+
+SHARED_REALM → return avira-platform
+DEDICATED_REALM → return tenant-specific realm
+6. Keycloak Provisioning
+
+Handled ONLY by iam-service.
+
+6.1 Shared Realm
+Created once at startup
+No per-tenant provisioning required
+6.2 Dedicated Realm
+
+On tenant creation:
+
+Create realm: tenant_{tenantId}
+Create clients:
+public client (frontend login)
+confidential client (service-to-service)
+Create roles:
+ADMIN
+USER
+7. Application Authentication Model
+
+Each application defines its own auth strategy.
+
+7.1 Supported auth_mode
+INTERNAL
+PLATFORM_SSO
+EXTERNAL_OIDC
+ANONYMOUS
+7.2 Application Schema
+application
+- id UUID
+- tenant_id UUID
+- name TEXT
+- type TEXT
+- auth_mode TEXT
+- auth_config JSONB
+  7.3 auth_config Examples
+  INTERNAL
+  {
+  "allowRegistration": true,
+  "jwtExpirationMinutes": 60
+  }
+  EXTERNAL_OIDC
+  {
+  "issuer": "https://accounts.google.com",
+  "clientId": "...",
+  "clientSecret": "..."
+  }
+8. Authentication Execution (application-service)
+
+MUST use strategy pattern:
+
+public interface AuthenticationHandler {
+LoginResponse authenticate(Application app, LoginRequest request);
+}
+
+Implementations:
+
+InternalAuthenticationHandler
+PlatformSsoAuthenticationHandler
+OidcAuthenticationHandler
+AnonymousAuthenticationHandler
+9. JWT Rules
+   Platform Token
+   Issued by Keycloak
+   MUST include tenantId (custom claim)
+   Application Token
+   {
+   "appId": "...",
+   "tenantId": "...",
+   "userId": "...",
+   "roles": []
+   }
+10. Multi-Tenancy Rules
+
+ALL queries MUST include:
+
+tenant_id
+app_id (if applicable)
+11. API Routing (Kong)
+    /api/iam/* → iam-service
+    /api/platform/* → platform-service
+    /app/* → application-service
+12. Security Rules
+    NEVER trust client-provided tenant_id/app_id
+    Always extract from JWT or gateway headers
+    ALWAYS validate tenant ownership
+13. Database Rules
+
+Using PostgreSQL
+
+UUID as primary key
+JSONB for config
+Index tenant_id, app_id
+14. Keycloak Rules
+
+Using Keycloak
+
+Default: single shared realm (avira-platform)
+Support dedicated realm per tenant
+ONLY iam-service interacts with Keycloak Admin API
+application-service may only validate tokens
+15. Anti-Patterns
+    ❌ Blindly creating realm for every tenant
+    ❌ application-service managing Keycloak
+    ❌ Using realm as tenant identifier
+    ❌ Mixing platform and application identity
+    ❌ Hardcoding authentication logic
+    ❌ Skipping tenant filters in queries
+16. MVP Constraints
+
+Support:
+
+INTERNAL
+ANONYMOUS
+
+Defer:
+
+PLATFORM_SSO
+EXTERNAL_OIDC
+17. Future Extensions
+    External OIDC providers (Google, Microsoft)
+    Platform SSO reuse
+    Tenant-provided IdP
+    Plugin-based authentication system
+18. Copilot Instructions
+    Follow module structure strictly
+    Respect service boundaries
+    Always enforce tenant isolation
+    Use strategy pattern for authentication
+    Route Keycloak operations via iam-service only
+    Generate production-ready Spring Boot code
+
+## 13. Future Extensions
+
+* External OIDC providers (Google, Microsoft)
+* Platform SSO reuse
+* Custom tenant-provided identity providers
+* Plugin-based authentication marketplace
+
+---
+
+## 14. Copilot Instructions
+
+When generating code:
+
+* Always respect auth_mode
+* Never assume a single authentication model
+* Use strategy pattern for authentication logic
+* Enforce tenant isolation in all queries
+* Generate production-ready Spring Boot code
+* Avoid shortcuts that break multi-tenancy
+
+---
+
+END OF FILE
+

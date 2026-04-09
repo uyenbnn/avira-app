@@ -6,19 +6,10 @@ data:
   # Infrastructure is expected to run outside K3s (docker-compose on host).
   # For k3d, replace host.docker.internal with host.k3d.internal if needed.
   KEYCLOAK_SERVER_URL: http://host.docker.internal:8080
-  KEYCLOAK_ISSUER_URI: http://host.docker.internal:8080/realms/avira
-  KEYCLOAK_REALM: avira
-  KEYCLOAK_CLIENT_ID: avira-user-client
-  KEYCLOAK_ADMIN_CLIENT_ID: admin-cli
+  KEYCLOAK_CLIENT_ID: avira-platform-client
 
-  AVIRA_MESSAGING_ENABLED: "true"
-  AVIRA_MESSAGING_PROVIDER: rabbitmq-stream
-  AVIRA_RABBIT_STREAM_HOST: host.docker.internal
-  AVIRA_RABBIT_STREAM_PORT: "5552"
-  AVIRA_RABBIT_STREAM_USERNAME: admin
-  AVIRA_RABBIT_STREAM_VHOST: /
-
+  # IAM database settings
   DB_USERNAME: postgres
-  DB_URL_USER: jdbc:postgresql://host.docker.internal:5455/avira-user
-  DB_URL_PROJECT: jdbc:postgresql://host.docker.internal:5455/avira-project
+  DB_URL_IAM: jdbc:postgresql://host.docker.internal:5455/iam_service
+  CATALOG_IAM_URL: http://iam-service:10003/api/v3/api-docs
 

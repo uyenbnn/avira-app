@@ -5,12 +5,7 @@ resources:
   - ../../base
 
 images:
-  - name: avira/authentication-service
+  - name: avira/iam-service
     newTag: local
-  - name: avira/user-service
-    newTag: local
-  - name: avira/project-service
-    newTag: local
-  - name: avira/application-initialization-service
-    newTag: local
+
 

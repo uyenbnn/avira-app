@@ -7,8 +7,6 @@ resources:
   - namespace.yaml
   - configmap-app-env.yaml
   - secret-app-env.yaml
-  - authentication-service.yaml
-  - user-service.yaml
-  - project-service.yaml
-  - application-initialization-service.yaml
+  - iam-service.yaml
+  - kong.yaml
 

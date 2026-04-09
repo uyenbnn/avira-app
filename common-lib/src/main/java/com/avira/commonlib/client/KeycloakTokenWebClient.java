@@ -1,14 +1,19 @@
 package com.avira.commonlib.client;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.MediaType;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.web.reactive.function.client.WebClientResponseException;
 import reactor.core.publisher.Mono;
 
 import java.util.Map;
 
 public class KeycloakTokenWebClient {
+
+    private static final Logger log = LoggerFactory.getLogger(KeycloakTokenWebClient.class);
 
     private final WebClient webClient;
     private final String tokenUrl;
@@ -71,14 +76,29 @@ public class KeycloakTokenWebClient {
 
     @SuppressWarnings("unchecked")
     private Map<String, Object> exchange(MultiValueMap<String, String> form) {
-        return webClient.post()
-                .uri(tokenUrl)
-                .contentType(MediaType.APPLICATION_FORM_URLENCODED)
-                .bodyValue(form)
-                .retrieve()
-                .bodyToMono(Map.class)
-                .switchIfEmpty(Mono.error(new IllegalStateException("Keycloak token response is empty")))
-                .block();
+        try {
+            return webClient.post()
+                    .uri(tokenUrl)
+                    .contentType(MediaType.APPLICATION_FORM_URLENCODED)
+                    .bodyValue(form)
+                    .retrieve()
+                    .bodyToMono(Map.class)
+                    .switchIfEmpty(Mono.error(new IllegalStateException("Keycloak token response is empty")))
+                    .block();
+        } catch (WebClientResponseException ex) {
+            log.warn("Keycloak token request failed with status {}: {}", ex.getStatusCode(), ex.getResponseBodyAsString());
+            throw ex;
+        }
+    }
+
+    private static String deriveLogoutUrl(String tokenUrl) {
+        if (tokenUrl == null || tokenUrl.isBlank()) {
+            throw new IllegalArgumentException("tokenUrl must not be blank");
+        }
+        if (tokenUrl.endsWith("/token")) {
+            return tokenUrl.substring(0, tokenUrl.length() - "/token".length()) + "/logout";
+        }
+        return tokenUrl;
     }
 
     private static String deriveLogoutUrl(String tokenUrl) {
