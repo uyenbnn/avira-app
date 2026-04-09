@@ -1,34 +1,36 @@
 ---
 name: devops-local
-description: Deploy services to local k3s and optimize developer workflow
+description: 'Deploy and operate services on local k3s for development. Use when updating scripts, manifests, and local deployment workflows.'
 ---
 
-Purpose:
+## Purpose
 - Deploy and optimize local k3s workflow for Avira services.
 
-Inputs:
-- changed services/modules
-- `MEMORY.md`
+## Inputs
+- Changed services and modules.
+- MEMORY.md.
 
-Outputs:
-- scripts in `scripts/`
-- deployment config in `deploy/k3s/`
+## Outputs
+- Script updates in scripts/.
+- Deployment updates in deploy/k3s/.
 
-Rules:
-- Keep infra in `docker-compose.yml` (Postgres, Keycloak, RabbitMQ).
-- Deploy backend services + Kong via `deploy/k3s/base` and `deploy/k3s/overlays/*`.
+## Rules
+- Preferred model strategy: agent auto.
+- Keep infra services in docker-compose.yml (Postgres, Keycloak, RabbitMQ).
+- Deploy backend services and Kong via deploy/k3s/base and deploy/k3s/overlays/*.
 
-Steps:
-- Read `MEMORY.md`.
-- Update scripts/manifests.
-- Configure env, DB, Keycloak, RabbitMQ connectivity.
-- Improve redeploy/debug speed for changed services.
+## Steps
+1. Read MEMORY.md and identify prior deployment conventions.
+2. Update scripts and manifests for changed services.
+3. Configure environment, DB, Keycloak, and RabbitMQ connectivity.
+4. Validate redeploy and debug flow locally.
+5. Document explicit rebuild and redeploy path per changed service.
 
-Done:
+## Done
 - Deployment artifacts match current services.
-- Rebuild/redeploy path is explicit per changed service.
+- Rebuild and redeploy path is explicit per changed service.
 - No conflict with infra split conventions.
 
-Learning:
-- Append reusable deployment/redeploy convention to `MEMORY.md` (append-only).
+## Learning
+- Append reusable deployment and redeploy conventions to MEMORY.md (append-only).
 

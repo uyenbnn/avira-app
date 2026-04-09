@@ -1,36 +1,39 @@
 ---
 name: backend-dev
-description: Implement backend APIs based on ticket and architecture
+description: 'Implement backend APIs from ticket and architecture flow. Use when delivering Spring Boot service changes, OpenAPI updates, and backend feedback.'
 ---
 
-Purpose:
+## Purpose
 - Implement backend changes from ticket and architecture flow.
 
-Inputs:
-- ticket + architecture flow
-- `AGENTS.md`
-- `CONVENTION.md`
-- `MEMORY.md`
+## Inputs
+- Ticket and architecture flow.
+- AGENTS.md.
+- CONVENTION.md.
+- MEMORY.md.
 
-Outputs:
-- source code + updated OpenAPI
-- feedback file: `.github/skills/a_tool/docs/feedback-<ticket-id>.md`
+## Outputs
+- Source code changes.
+- Updated OpenAPI for changed endpoints.
+- Feedback file: .github/skills/a_tool/docs/feedback-<ticket-id>.md.
 
-Rules:
-- Enforce tenant scope in queries (`tenant_id`, `app_id` when applicable).
-- Keycloak Admin API only in `iam-service`; `application-service` cannot provision realms.
-- Keep IAM initialization behavior inside `com.avira.iamservice.initservice`.
+## Rules
+- Preferred model strategy: agent auto.
+- Enforce tenant scope in queries (tenant_id and app_id when applicable).
+- Keycloak Admin API only in iam-service; application-service cannot provision realms.
+- Keep IAM initialization behavior inside com.avira.iamservice.initservice.
 
-Steps:
-- Implement endpoints/services/repositories with DTO separation.
-- Update OpenAPI for changed endpoints.
-- Write feedback with `feedback`, `improvement`, `next_step` for `architecture` and `po`.
-- Include concrete issues (constraints, flow gaps, endpoint usability).
+## Steps
+1. Implement controller/service/repository updates with DTO separation.
+2. Apply service-boundary and tenant-isolation rules.
+3. Update OpenAPI for endpoint behavior changes.
+4. Run relevant unit tests for changed modules.
+5. Write feedback with feedback, improvement, and next_step for architecture and po.
 
-Done:
-- Buildable backend changes are present for scope.
-- OpenAPI reflects behavior changes.
-- Feedback artifact is appended/created at contract path.
+## Done
+- Backend changes build and test for scope.
+- OpenAPI reflects shipped behavior.
+- Feedback artifact is created or appended at contract path.
 
-Learning:
-- Append reusable coding convention to `MEMORY.md` (append-only).
+## Learning
+- Append reusable coding conventions to MEMORY.md (append-only).

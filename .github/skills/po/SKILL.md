@@ -1,40 +1,41 @@
 ---
 name: po
-description: Create business tickets defining user flow and requirements
+description: 'Create business tickets with clear user flow and acceptance criteria. Use when turning ideas into prioritized, implementation-ready tickets.'
 ---
 
-Purpose:
+## Purpose
 - Turn product ideas into prioritized tickets for implementation.
 
-Inputs:
-- user ideas in `.github/skills/po/IDEA.md`
-- optional implementation feedback from `.github/skills/a_tool/docs/feedback-<ticket-id>.md`
-- `AGENTS.md`
-- `MEMORY.md`
+## Inputs
+- User ideas in .github/skills/po/IDEA.md.
+- Optional implementation feedback from .github/skills/a_tool/docs/feedback-<ticket-id>.md.
+- AGENTS.md.
+- MEMORY.md.
 
-Outputs:
-- `.github/skills/a_tool/tickets/ticket-<id>-<feature>.md`
-- include: title, goal, actors, preconditions, main flow, edge cases, acceptance criteria.
+## Outputs
+- Ticket files in .github/skills/a_tool/tickets/ticket-<id>-<feature>.md.
+- Each ticket includes title, goal, actors, preconditions, main flow, edge cases, and acceptance criteria.
 
-Rules:
-- Classification values: `very good`, `good`, `need but not now`, `no need`.
-- If user already classifies an idea, PO uses that classification.
-- If classification is missing, PO proposes one with rationale.
-- Create tickets only for `very good` and `good`.
-- Keep `need but not now` in backlog with reason.
-- Keep `no need` with rejection reason.
+## Rules
+- Preferred model strategy: chatgpt 5.1 mini free version.
+- Classification values: very good, good, need but not now, no need.
+- If user classification exists, use it.
+- If classification is missing, propose one with rationale.
+- Create tickets only for very good and good.
+- Keep need but not now in backlog with reason.
+- Keep no need with rejection reason.
 
-Steps:
-- Review/classify ideas from `IDEA.md`.
-- Create tickets for `very good` and `good`.
-- Keep deferred/rejected ideas with clear rationale.
-- Consume implementation feedback to improve new tickets.
+## Steps
+1. Review and classify ideas from IDEA.md.
+2. Create tickets for very good and good ideas.
+3. Track deferred and rejected ideas with clear rationale.
+4. Use implementation feedback to improve future ticket quality.
 
-Done:
+## Done
 - New tickets exist for actionable ideas.
-- Deferred/rejected ideas are explicitly tracked with reason.
-- Ticket quality includes clear flow and acceptance criteria.
+- Deferred and rejected ideas are explicitly tracked with reason.
+- Tickets include clear flow and acceptance criteria.
 
-Learning:
+## Learning
 - Use feedback files to improve future ticket quality.
-- Append reusable product/ticket convention to `MEMORY.md` (append-only).
+- Append reusable product and ticket conventions to MEMORY.md (append-only).

@@ -1,34 +1,36 @@
 ---
 name: frontend-dev
-description: Build minimal UI based on OpenAPI for testing workflows
+description: 'Build minimal UI based on OpenAPI for workflow validation. Use when implementing frontend flows that exercise backend APIs.'
 ---
 
-Purpose:
+## Purpose
 - Build minimal functional UI to validate ticket workflows.
 
-Inputs:
-- ticket flow + OpenAPI
-- `AGENTS.md`
-- `MEMORY.md`
+## Inputs
+- Ticket flow and OpenAPI contract.
+- AGENTS.md.
+- MEMORY.md.
 
-Outputs:
-- UI changes in `avira-ui-app/`
-- feedback file: `.github/skills/a_tool/docs/feedback-<ticket-id>.md`
+## Outputs
+- UI changes in avira-ui-app/.
+- Feedback file: .github/skills/a_tool/docs/feedback-<ticket-id>.md.
 
-Rules:
-- Prioritize function-first flows (register/login/create app/domain config).
-- Keep UI simple and testable.
+## Rules
+- Preferred model strategy: agent auto.
+- Prioritize function-first flows (register, login, create app, domain config).
+- Keep UI simple, testable, and aligned with backend contract.
 
-Steps:
-- Implement UI flow required by ticket.
-- Wire API calls from OpenAPI/backend contract.
-- Write feedback with `feedback`, `improvement`, `next_step` for `architecture` and `po`.
-- Highlight API usability and flow-definition gaps.
+## Steps
+1. Implement UI flow required by ticket.
+2. Wire API calls from OpenAPI and backend contract.
+3. Validate error states and essential edge paths.
+4. Write feedback with feedback, improvement, and next_step for architecture and po.
+5. Highlight API usability and flow-definition gaps.
 
-Done:
+## Done
 - Ticket flow works in UI scope.
 - API integration is aligned with current backend contract.
-- Feedback artifact is appended/created at contract path.
+- Feedback artifact is created or appended at contract path.
 
-Learning:
-- Append reusable UI/API integration convention to `MEMORY.md` (append-only).
+## Learning
+- Append reusable UI and API integration conventions to MEMORY.md (append-only).

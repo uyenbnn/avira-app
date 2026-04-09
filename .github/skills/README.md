@@ -26,6 +26,7 @@ Shared workflow artifacts:
 - `devops-local`: update local/prod deployment scripts in `scripts/` and k3s manifests in `deploy/k3s/`.
 - `documentation-guy`: write modular feature docs in `docs/<feature>/` and update `AGENTS.md` when conventions change.
 - `orchestrator`: coordinate end-to-end flow and pass artifacts between skills.
+- `model-routing`: apply model selection policy per skill (agent auto for backend-dev/frontend-dev/devops-local, chatgpt 5.1 mini free for others).
 
 Learning rule:
 - After task completion, each skill appends reusable conventions/lessons to its own `MEMORY.md`.
