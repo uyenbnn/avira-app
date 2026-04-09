@@ -100,5 +100,15 @@ public class KeycloakTokenWebClient {
         }
         return tokenUrl;
     }
+
+    private static String deriveLogoutUrl(String tokenUrl) {
+        if (tokenUrl == null || tokenUrl.isBlank()) {
+            throw new IllegalArgumentException("tokenUrl must not be blank");
+        }
+        if (tokenUrl.endsWith("/token")) {
+            return tokenUrl.substring(0, tokenUrl.length() - "/token".length()) + "/logout";
+        }
+        return tokenUrl;
+    }
 }
 
