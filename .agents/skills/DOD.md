@@ -1,5 +1,0 @@
-- Create integration test in `integration-tests/node-axios/` that verifies DOD flow.
-- Create simplest UI for this flow.
-- All tests should run successfully against K3s setups.
-- Ensure that the test can be run against both local modules and K3s setups.
-- Update environment variables and configurations for development and production env.

@@ -6,6 +6,10 @@ convention:
 - Implementation of error handling and logging mechanisms to facilitate debugging and monitoring of the application.
 - Rest client api path is not store in application properties.
 - all rest client api path is store in common-lib as constant, and we can use it across the application to avoid hardcoding the api path in multiple places and make it easier to maintain and update the api paths in the future if needed.
+- For multi-tenant data, always scope queries by `tenant_id` and `app_id` when applicable.
+- Never trust client-provided tenant/app ownership; derive from JWT/gateway context.
+- Keycloak Admin API integration is owned by `iam-service` only.
+- `application-service` must not create/manage Keycloak realms.
 
 Coding styles:
 - Simple and consistent naming conventions for variables, methods, and classes.
