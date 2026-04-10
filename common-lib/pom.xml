@@ -13,7 +13,7 @@
 
     <properties>
         <spring.boot.version>4.0.5</spring.boot.version>
-        <maven.compiler.release>25</maven.compiler.release>
+        <maven.compiler.release>21</maven.compiler.release>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <spring.framework.version>7.0.6</spring.framework.version>
     </properties>
