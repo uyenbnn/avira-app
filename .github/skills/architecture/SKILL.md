@@ -20,17 +20,20 @@ description: 'Analyze tickets and define implementation-ready architecture flow.
 - Keep design concise and directly actionable.
 - Enforce boundaries: Keycloak Admin only in iam-service; no realm management in application-service.
 - Include tenant_id and app_id isolation constraints in data and API flow.
+- Define API interface contracts clearly so backend and frontend can execute in parallel.
 
 ## Steps
 1. Read ticket scope and relevant feedback.
 2. Map service responsibilities and integration boundaries.
-3. Define API/data flow, including tenant isolation and trust boundaries.
+3. Define API interface contracts and API/data flow, including tenant isolation and trust boundaries.
+4. Define parallel work packages for backend and frontend from the same contract.
 4. Write or update .github/skills/a_tool/architect/flow-<feature>.md.
 5. Mark ambiguities as explicit assumptions.
 
 ## Done
 - Flow includes service boundaries and security constraints.
 - API draft and tenant isolation notes are present.
+- Parallel backend/frontend work packages are present.
 - Output file is stored at the contract path.
 
 ## Learning

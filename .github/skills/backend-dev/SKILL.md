@@ -27,8 +27,8 @@ description: 'Implement backend APIs from ticket and architecture flow. Use when
 1. Implement controller/service/repository updates with DTO separation.
 2. Apply service-boundary and tenant-isolation rules.
 3. Update OpenAPI for endpoint behavior changes.
-4. Run relevant unit tests for changed modules.
-5. Write feedback with feedback, improvement, and next_step for architecture and po.
+4. Run backend unit tests and function-level tests for changed modules.
+5. Write feedback with feedback, improvement, and next_step for architecture, po, and frontend integration.
 
 ## Done
 - Backend changes build and test for scope.

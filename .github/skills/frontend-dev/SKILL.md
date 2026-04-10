@@ -19,17 +19,20 @@ description: 'Build minimal UI based on OpenAPI for workflow validation. Use whe
 - Preferred model strategy: agent auto.
 - Prioritize function-first flows (register, login, create app, domain config).
 - Keep UI simple, testable, and aligned with backend contract.
+- Use architecture API interface contracts as baseline for parallel backend/frontend work.
 
 ## Steps
 1. Implement UI flow required by ticket.
 2. Wire API calls from OpenAPI and backend contract.
-3. Validate error states and essential edge paths.
-4. Write feedback with feedback, improvement, and next_step for architecture and po.
-5. Highlight API usability and flow-definition gaps.
+3. Create and run frontend unit tests and function-level workflow tests.
+4. Validate error states and essential edge paths.
+5. Write feedback with feedback, improvement, and next_step for architecture and po.
+6. Highlight API usability and flow-definition gaps.
 
 ## Done
 - Ticket flow works in UI scope.
 - API integration is aligned with current backend contract.
+- Unit/function test evidence is present.
 - Feedback artifact is created or appended at contract path.
 
 ## Learning
