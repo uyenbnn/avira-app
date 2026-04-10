@@ -14,11 +14,13 @@ description: 'Create business tickets with clear user flow and acceptance criter
 
 ## Outputs
 - Ticket files in .github/skills/a_tool/tickets/ticket-<id>-<feature>.md.
+- Process plan file in plan/po-plan-<YYYYMMDD>-<short-topic>.md.
 - Each ticket includes title, goal, actors, preconditions, main flow, edge cases, and acceptance criteria.
 
 ## Rules
 - Preferred model strategy: chatgpt 5.1 mini free version.
 - Classification values: very good, good, need but not now, no need.
+- Always create or update a readable process plan file under `plan/` so users can follow the workflow.
 - If user classification exists, use it.
 - If classification is missing, propose one with rationale.
 - Create tickets only for very good and good.
@@ -27,11 +29,13 @@ description: 'Create business tickets with clear user flow and acceptance criter
 
 ## Steps
 1. Review and classify ideas from IDEA.md.
-2. Create tickets for very good and good ideas.
-3. Track deferred and rejected ideas with clear rationale.
-4. Use implementation feedback to improve future ticket quality.
+2. Create or update `plan/po-plan-<YYYYMMDD>-<short-topic>.md` with scope, phases, dependencies, and outputs.
+3. Create tickets for very good and good ideas.
+4. Track deferred and rejected ideas with clear rationale.
+5. Use implementation feedback to improve future ticket quality.
 
 ## Done
+- Process plan file exists in `plan/`.
 - New tickets exist for actionable ideas.
 - Deferred and rejected ideas are explicitly tracked with reason.
 - Tickets include clear flow and acceptance criteria.

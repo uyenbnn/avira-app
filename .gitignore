@@ -1,3 +1,24 @@
 .agent/
 AGENTS.md
 
+# Maven/Java build outputs
+**/target/
+
+# Logs and dumps
+*.log
+*.out
+*.err
+*.dump
+*.dumpstream
+
+# IDE/editor local settings
+.idea/
+.vscode/
+
+# OS/generated metadata
+.DS_Store
+Thumbs.db
+
+# Generated PO runtime plans (keep README committed)
+plan/po-plan-*.md
+
