@@ -1,0 +1,63 @@
+openapi: 3.0.3
+info:
+  title: IAM Authentication API
+  version: 1.0.0
+paths:
+  /api/iam/auth/login:
+    post:
+      summary: Login through Keycloak using tenant-aware realm resolution
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [tenantId, username, password]
+              properties:
+                tenantId:
+                  type: string
+                appId:
+                  type: string
+                username:
+                  type: string
+                password:
+                  type: string
+      responses:
+        "200":
+          description: Access and refresh token with application token payload
+  /api/iam/auth/refresh:
+    post:
+      summary: Refresh token against tenant-specific realm
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [tenantId, refreshToken]
+              properties:
+                tenantId:
+                  type: string
+                refreshToken:
+                  type: string
+      responses:
+        "200":
+          description: Refreshed token response
+  /api/iam/auth/logout:
+    post:
+      summary: Logout and revoke session from Keycloak
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [tenantId, refreshToken]
+              properties:
+                tenantId:
+                  type: string
+                refreshToken:
+                  type: string
+      responses:
+        "204":
+          description: Logout completed

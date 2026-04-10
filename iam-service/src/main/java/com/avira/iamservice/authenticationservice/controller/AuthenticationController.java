@@ -25,17 +25,22 @@ public class AuthenticationController {
 
     @PostMapping("/login")
     public TokenResponse login(@RequestBody LoginRequest request) {
-        return authenticationService.login(request.getUsername(), request.getPassword());
+        return authenticationService.login(
+                request.getTenantId(),
+                request.getAppId(),
+                request.getUsername(),
+                request.getPassword()
+        );
     }
 
     @PostMapping("/refresh")
     public TokenResponse refresh(@RequestBody RefreshTokenRequest request) {
-        return authenticationService.refresh(request.getRefreshToken());
+        return authenticationService.refresh(request.getTenantId(), "iam-service", request.getRefreshToken());
     }
 
     @PostMapping("/logout")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void logout(@RequestBody LogoutRequest request) {
-        authenticationService.logout(request.getRefreshToken());
+        authenticationService.logout(request.getTenantId(), request.getRefreshToken());
     }
 }

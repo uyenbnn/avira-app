@@ -4,9 +4,15 @@ import com.avira.iamservice.authenticationservice.dto.TokenResponse;
 
 public interface AuthenticationProvider {
 
-    TokenResponse login(String username, String password);
+    TokenResponse login(String tenantId, String username, String password);
 
-    TokenResponse refresh(String refreshToken);
+    TokenResponse refresh(String tenantId, String refreshToken);
 
-    void logout(String refreshToken);
+    java.util.Map<String, Object> userInfo(String tenantId, String accessToken);
+
+    boolean introspect(String tenantId, String accessToken);
+
+    String clientCredentialsToken(String tenantId);
+
+    void logout(String tenantId, String refreshToken);
 }

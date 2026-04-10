@@ -5,6 +5,9 @@ public record TokenResponse(
         String refreshToken,
         String tokenType,
         Long expiresIn,
-        String provider
+        String provider,
+        String tenantId,
+        String appId,
+        java.util.Map<String, Object> applicationTokenPayload
 ) {
 }
