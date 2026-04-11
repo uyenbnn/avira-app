@@ -1,0 +1,103 @@
+{
+  "realm": "saas",
+  "enabled": true,
+  "registrationAllowed": false,
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "roles": {
+    "realm": [
+      {
+        "name": "platform-admin"
+      },
+      {
+        "name": "anonymous"
+      }
+    ]
+  },
+  "clients": [
+    {
+      "clientId": "saas-backend",
+      "name": "saas-backend",
+      "enabled": true,
+      "publicClient": false,
+      "secret": "${KEYCLOAK_SAAS_CLIENT_SECRET}",
+      "serviceAccountsEnabled": true,
+      "standardFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "protocol": "openid-connect"
+    },
+    {
+      "clientId": "saas-console",
+      "name": "saas-console",
+      "enabled": true,
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false,
+      "protocol": "openid-connect",
+      "redirectUris": [
+        "http://localhost:4200/*",
+        "https://platform.local/*"
+      ],
+      "webOrigins": [
+        "+"
+      ],
+      "attributes": {
+        "pkce.code.challenge.method": "S256"
+      }
+    }
+  ],
+  "users": [
+    {
+      "username": "saas-admin",
+      "enabled": true,
+      "email": "${KEYCLOAK_SAAS_ADMIN_EMAIL}",
+      "emailVerified": true,
+      "attributes": {
+        "platform_role": [
+          "PLATFORM_ADMIN"
+        ]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "${KEYCLOAK_SAAS_ADMIN_PASSWORD}",
+          "temporary": true
+        }
+      ],
+      "realmRoles": [
+        "platform-admin"
+      ]
+    },
+    {
+      "username": "anonymous-saas",
+      "enabled": false,
+      "emailVerified": false,
+      "attributes": {
+        "platform_role": [
+          "ANONYMOUS"
+        ]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "disabled-anonymous-saas",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "anonymous"
+      ]
+    },
+    {
+      "username": "service-account-saas-backend",
+      "enabled": true,
+      "serviceAccountClientId": "saas-backend",
+      "clientRoles": {
+        "realm-management": [
+          "realm-admin"
+        ]
+      }
+    }
+  ]
+}

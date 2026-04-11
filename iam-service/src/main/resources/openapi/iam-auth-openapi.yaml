@@ -65,7 +65,7 @@ paths:
                 $ref: "#/components/schemas/SharedRealmInitResponse"
   /api/iam/internal/init/tenants/{tenantId}:
     post:
-      summary: Provision tenant client in shared realm
+      summary: Provision tenant backend client in shared realm
       parameters:
         - in: path
           name: tenantId
@@ -195,6 +195,7 @@ components:
           type: string
         keycloakClientId:
           type: string
+          description: Keycloak client id with pattern tenant-{tenantId}-backend
         status:
           type: string
           enum: [PROVISIONED, ALREADY_EXISTS]

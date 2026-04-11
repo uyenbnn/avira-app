@@ -13,3 +13,6 @@ data:
   IAM_REALM_DEDICATED_PREFIX: tenant_
   IAM_INIT_KEYCLOAK_BASE_URL: http://host.docker.internal:8080
   IAM_AUTH_KEYCLOAK_BASE_URL: http://host.docker.internal:8080
+  IAM_INIT_SAAS_REALM_NAME: saas
+  IAM_INIT_ADMIN_REALM: master
+  IAM_INIT_SAAS_CLIENT_ID: saas-backend

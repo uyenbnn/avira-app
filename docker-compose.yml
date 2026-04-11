@@ -37,7 +37,7 @@ services:
     image: quay.io/keycloak/keycloak:latest
     container_name: avira-keycloak
     restart: unless-stopped
-    command: start-dev
+    command: start-dev --import-realm
     environment:
       KC_DB: postgres
       KC_DB_URL_HOST: postgres
@@ -45,10 +45,25 @@ services:
       KC_DB_USERNAME: postgres
       KC_DB_PASSWORD: postgres
 
-      KEYCLOAK_ADMIN: admin
-      KEYCLOAK_ADMIN_PASSWORD: admin
+      # Local/dev only: override CHANGE_ME defaults via environment before running outside local testing.
+      KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN:-CHANGE_ME_KEYCLOAK_ADMIN}
+      KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-CHANGE_ME_KEYCLOAK_ADMIN_PASSWORD}
+      KEYCLOAK_SAAS_CLIENT_SECRET: ${KEYCLOAK_SAAS_CLIENT_SECRET:-CHANGE_ME_KEYCLOAK_SAAS_CLIENT_SECRET}
+      KEYCLOAK_PLATFORM_CLIENT_SECRET: ${KEYCLOAK_PLATFORM_CLIENT_SECRET:-CHANGE_ME_KEYCLOAK_PLATFORM_CLIENT_SECRET}
+      KEYCLOAK_SAAS_ADMIN_PASSWORD: ${KEYCLOAK_SAAS_ADMIN_PASSWORD:-CHANGE_ME_KEYCLOAK_SAAS_ADMIN_PASSWORD}
+      KEYCLOAK_SAAS_ADMIN_EMAIL: ${KEYCLOAK_SAAS_ADMIN_EMAIL:-admin@platform.local}
     ports:
       - "8080:8080"
+    volumes:
+      - ./deploy/keycloak/realm-templates:/opt/keycloak/data/import:ro
+    healthcheck:
+      test:
+        - "CMD-SHELL"
+        - "exec 3<>/dev/tcp/127.0.0.1/8080; printf 'GET /realms/master/.well-known/openid-configuration HTTP/1.1\\r\\nHost: localhost\\r\\nConnection: close\\r\\n\\r\\n' >&3; grep -q '200' <&3"
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
     depends_on:
       - postgres
 

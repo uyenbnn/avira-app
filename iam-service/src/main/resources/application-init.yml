@@ -12,11 +12,11 @@ iam:
       dedicated-prefix: tenant_
       frontend-client-id: saas-frontend
       backend-client-id: saas-backend
-      backend-client-secret: ${KEYCLOAK_BACKEND_CLIENT_SECRET:change-me-backend-secret}
+      backend-client-secret: ${KEYCLOAK_PLATFORM_CLIENT_SECRET:change-me-backend-secret}
   auth:
     provider: keycloak
     keycloak:
       base-url: http://localhost:8080
       frontend-client-id: saas-frontend
       backend-client-id: saas-backend
-      backend-client-secret: ${KEYCLOAK_BACKEND_CLIENT_SECRET:change-me-backend-secret}
+      backend-client-secret: ${KEYCLOAK_PLATFORM_CLIENT_SECRET:change-me-backend-secret}

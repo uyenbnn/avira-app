@@ -2,6 +2,7 @@ package com.avira.iamservice.realm.service;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -17,7 +18,17 @@ class SharedOrDedicatedRealmResolverTest {
     @BeforeEach
     void setUp() {
         store = new InMemoryTenantRealmConfigStore();
-        resolver = new SharedOrDedicatedRealmResolver(store, new IamRealmProperties("avira-platform", "tenant_"));
+        resolver = new SharedOrDedicatedRealmResolver(
+            store,
+            new IamRealmProperties(
+                "avira-platform",
+                "tenant_",
+                "saas",
+                "master",
+                "saas-backend",
+                "tenant-%s-backend"
+            )
+        );
     }
 
     @Test

@@ -1,0 +1,81 @@
+{
+  "realm": "avira-platform",
+  "enabled": true,
+  "registrationAllowed": true,
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "roles": {
+    "realm": [
+      {
+        "name": "anonymous"
+      }
+    ]
+  },
+  "clients": [
+    {
+      "clientId": "avira-platform-backend",
+      "name": "avira-platform-backend",
+      "enabled": true,
+      "publicClient": false,
+      "secret": "${KEYCLOAK_PLATFORM_CLIENT_SECRET}",
+      "serviceAccountsEnabled": true,
+      "standardFlowEnabled": false,
+      "directAccessGrantsEnabled": true,
+      "protocol": "openid-connect"
+    },
+    {
+      "clientId": "avira-platform-public",
+      "name": "avira-platform-public",
+      "enabled": true,
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false,
+      "protocol": "openid-connect",
+      "redirectUris": [
+        "http://localhost:4200/*",
+        "https://platform.local/*"
+      ],
+      "webOrigins": [
+        "+"
+      ],
+      "attributes": {
+        "pkce.code.challenge.method": "S256"
+      }
+    }
+  ],
+  "users": [
+    {
+      "username": "anonymous-platform",
+      "enabled": false,
+      "emailVerified": false,
+      "attributes": {
+        "platform_role": [
+          "ANONYMOUS"
+        ]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "disabled-anonymous-platform",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "anonymous"
+      ]
+    },
+    {
+      "username": "service-account-avira-platform-backend",
+      "enabled": true,
+      "serviceAccountClientId": "avira-platform-backend",
+      "clientRoles": {
+        "realm-management": [
+          "manage-users",
+          "view-users",
+          "manage-clients"
+        ]
+      }
+    }
+  ]
+}

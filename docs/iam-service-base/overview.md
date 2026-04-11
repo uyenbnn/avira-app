@@ -54,9 +54,47 @@ Permissions:
 
 ## Notes
 
-This is a base scaffold to establish service boundaries and core contracts.
-Production integrations still required:
-- real Keycloak Admin API provisioning and client/role setup
-- token exchange and validation against Keycloak
-- persistent role assignments and permission policies
-- integration tests against local k3s runtime
+
+# Keycloak Initialization (Implemented)
+
+The following Keycloak realms, clients, and users are auto-provisioned for local and test environments:
+
+## Realms Created
+- `saas`
+- `avira-platform`
+
+## Clients (per realm)
+
+**saas**
+- `saas-backend` (confidential, service account enabled)
+- `saas-console` (public, PKCE, for UI)
+
+**avira-platform**
+- `avira-platform-backend` (confidential, service account enabled)
+- `avira-platform-public` (public, PKCE, for UI)
+
+## Default Users
+
+**saas**
+- `saas-admin` (enabled, admin role)
+- `anonymous-saas` (anonymous role)
+
+**avira-platform**
+- `anonymous-platform` (disabled, anonymous role)
+
+## Local Deploy & Verification
+
+1. Deploy Keycloak with realm templates:
+	- See: [`deploy/keycloak/realm-templates/saas-realm.json`](../../deploy/keycloak/realm-templates/saas-realm.json)
+	- See: [`deploy/keycloak/realm-templates/avira-platform-realm.json`](../../deploy/keycloak/realm-templates/avira-platform-realm.json)
+2. Start `iam-service` and supporting services (see `docker-compose.yml`).
+3. Verify realms, clients, and users are present using Keycloak admin UI or API.
+
+## Test Evidence
+
+Integration tests validate Keycloak initialization:
+- [integration-tests/node-axios/tests/keycloak-realms-auto-created.integration.js](../../integration-tests/node-axios/tests/keycloak-realms-auto-created.integration.js)
+- [integration-tests/node-axios/tests/keycloak-clients-provisioned.integration.js](../../integration-tests/node-axios/tests/keycloak-clients-provisioned.integration.js)
+- [integration-tests/node-axios/tests/keycloak-default-users-provisioned.integration.js](../../integration-tests/node-axios/tests/keycloak-default-users-provisioned.integration.js)
+
+This documents the actual implemented and tested Keycloak initialization for local and CI environments.

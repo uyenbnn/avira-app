@@ -54,6 +54,29 @@ if (-not $SkipInfra) {
     Invoke-Checked -Title "Start infrastructure (postgres, rabbitmq, keycloak)" -Action {
         docker compose -f $composePath up -d postgres rabbitmq keycloak
     }
+
+    Invoke-Checked -Title "Wait for Keycloak readiness" -Action {
+        $maxAttempts = 30
+        for ($i = 1; $i -le $maxAttempts; $i++) {
+            try {
+                $response = Invoke-WebRequest -Uri "http://localhost:8080/realms/master/.well-known/openid-configuration" -UseBasicParsing -TimeoutSec 5
+                if ($response.StatusCode -eq 200) {
+                    Write-Host "Keycloak is ready."
+                    break
+                }
+            }
+            catch {
+                if ($i -eq $maxAttempts) {
+                    throw "Keycloak was not ready after $maxAttempts attempts."
+                }
+            }
+
+            if ($i -lt $maxAttempts) {
+                Write-Host "Waiting for Keycloak readiness... attempt $i/$maxAttempts"
+                Start-Sleep -Seconds 2
+            }
+        }
+    }
 }
 
 Invoke-Checked -Title "Ensure iam_service database exists" -Action {
