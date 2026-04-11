@@ -1,15 +1,8 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: avira-app-env
+  name: iam-service-app-env
 data:
-  # Infrastructure is expected to run outside K3s (docker-compose on host).
-  # For k3d, replace host.docker.internal with host.k3d.internal if needed.
-  KEYCLOAK_SERVER_URL: http://host.docker.internal:8080
-  KEYCLOAK_CLIENT_ID: avira-platform-client
-
-  # IAM database settings
-  DB_USERNAME: postgres
-  DB_URL_IAM: jdbc:postgresql://host.docker.internal:5455/iam_service
-  CATALOG_IAM_URL: http://iam-service:10003/api/v3/api-docs
-
+  SPRING_APPLICATION_NAME: iam-service
+  IAM_REALM_SHARED_NAME: avira-platform
+  IAM_REALM_DEDICATED_PREFIX: tenant_

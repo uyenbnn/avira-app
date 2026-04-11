@@ -1,12 +1,11 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
-
 namespace: avira
-
 resources:
   - namespace.yaml
   - configmap-app-env.yaml
-  - secret-app-env.yaml
-  - iam-service.yaml
-  - kong.yaml
-
+  - iam-service-deployment.yaml
+  - iam-service-service.yaml
+  - kong-configmap.yaml
+  - kong-deployment.yaml
+  - kong-service.yaml

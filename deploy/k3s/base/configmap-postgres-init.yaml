@@ -1,9 +1,0 @@
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: postgres-init-db
-data:
-  01-init.sql: |
-    CREATE DATABASE "avira-user";
-    CREATE DATABASE "avira-project";
-

@@ -1,0 +1,23 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: iam-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: iam-service
+  template:
+    metadata:
+      labels:
+        app: iam-service
+    spec:
+      containers:
+        - name: iam-service
+          image: avira/iam-service:local
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 10003
+          envFrom:
+            - configMapRef:
+                name: iam-service-app-env
