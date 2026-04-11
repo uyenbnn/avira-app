@@ -1,39 +1,12 @@
-<main class="layout" aria-labelledby="dashboard-title">
-  <header class="hero">
-    <p class="eyebrow">SaaS Operations</p>
-    <h1 id="dashboard-title">{{ appTitle }}</h1>
-    <p class="hero-copy">{{ subtitle }}</p>
-    <div class="hero-actions">
-      <button type="button" class="btn btn-primary">Open tenant console</button>
-      <button type="button" class="btn btn-secondary">View deployment health</button>
-    </div>
+<main class="shell">
+  <header class="topbar">
+    <strong>{{ appTitle }}</strong>
+    <nav class="nav">
+      <a routerLink="/auth/login">Login</a>
+      <a routerLink="/business/apps">Business Workflow</a>
+      <button type="button" (click)="logout()">Logout</button>
+    </nav>
   </header>
 
-  <section class="card-grid" aria-label="Operational metrics">
-    @for (metric of metrics; track metric.label) {
-      <article class="card metric-card">
-        <p class="card-label">{{ metric.label }}</p>
-        <p class="card-value">{{ metric.value }}</p>
-        <p class="card-trend" [class.positive]="metric.isPositive">{{ metric.trend }}</p>
-      </article>
-    }
-  </section>
-
-  <section class="card" aria-labelledby="quick-actions-title">
-    <div class="section-head">
-      <h2 id="quick-actions-title">Quick actions</h2>
-      <p>Use guided tasks to validate API workflows with minimal friction.</p>
-    </div>
-
-    <ul class="action-list" aria-label="Available quick actions">
-      @for (action of quickActions; track action.title) {
-        <li>
-          <a class="action-item" [href]="action.href">
-            <span class="action-title">{{ action.title }}</span>
-            <span class="action-detail">{{ action.detail }}</span>
-          </a>
-        </li>
-      }
-    </ul>
-  </section>
+  <router-outlet></router-outlet>
 </main>

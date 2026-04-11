@@ -26,7 +26,7 @@ async function request(client, config, okStatusCodes) {
     }
     const details = error.response
       ? `status=${error.response.status} body=${JSON.stringify(error.response.data)}`
-      : error.message;
+      : `message=${error.message || 'unknown network error'} code=${error.code || 'n/a'} baseURL=${client.defaults.baseURL || 'n/a'}`;
     throw new Error(`HTTP ${config.method || 'GET'} ${config.url} failed: ${details}`);
   }
 }

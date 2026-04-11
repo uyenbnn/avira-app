@@ -4,8 +4,13 @@ namespace: avira
 resources:
   - namespace.yaml
   - configmap-app-env.yaml
+  - iam-service-secret.yaml
   - iam-service-deployment.yaml
   - iam-service-service.yaml
+  - platform-service-deployment.yaml
+  - platform-service-service.yaml
+  - application-service-deployment.yaml
+  - application-service-service.yaml
   - kong-configmap.yaml
   - kong-deployment.yaml
   - kong-service.yaml

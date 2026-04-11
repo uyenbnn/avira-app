@@ -7,5 +7,9 @@ resources:
 images:
   - name: avira/iam-service
     newTag: local
+  - name: avira/platform-service
+    newTag: local
+  - name: avira/application-service
+    newTag: local
 
 

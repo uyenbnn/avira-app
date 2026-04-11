@@ -17,7 +17,9 @@ spec:
           image: avira/iam-service:local
           imagePullPolicy: IfNotPresent
           ports:
-            - containerPort: 10003
+            - containerPort: 8080
           envFrom:
             - configMapRef:
                 name: iam-service-app-env
+            - secretRef:
+                name: iam-service-secret

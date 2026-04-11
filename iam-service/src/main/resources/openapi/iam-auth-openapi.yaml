@@ -1,6 +1,6 @@
 openapi: 3.0.3
 info:
-  title: IAM Authentication API
+  title: IAM MVP API
   version: 1.0.0
 paths:
   /api/iam/auth/login:
@@ -11,20 +11,16 @@ paths:
         content:
           application/json:
             schema:
-              type: object
-              required: [tenantId, username, password]
-              properties:
-                tenantId:
-                  type: string
-                appId:
-                  type: string
-                username:
-                  type: string
-                password:
-                  type: string
+              $ref: "#/components/schemas/LoginRequest"
       responses:
         "200":
           description: Access and refresh token with application token payload
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TokenResponse"
+        "400":
+          description: Invalid auth request
   /api/iam/auth/refresh:
     post:
       summary: Refresh token against tenant-specific realm
@@ -33,16 +29,16 @@ paths:
         content:
           application/json:
             schema:
-              type: object
-              required: [tenantId, refreshToken]
-              properties:
-                tenantId:
-                  type: string
-                refreshToken:
-                  type: string
+              $ref: "#/components/schemas/RefreshRequest"
       responses:
         "200":
           description: Refreshed token response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TokenResponse"
+        "400":
+          description: Invalid refresh request
   /api/iam/auth/logout:
     post:
       summary: Logout and revoke session from Keycloak
@@ -51,13 +47,184 @@ paths:
         content:
           application/json:
             schema:
-              type: object
-              required: [tenantId, refreshToken]
-              properties:
-                tenantId:
-                  type: string
-                refreshToken:
-                  type: string
+              $ref: "#/components/schemas/LogoutRequest"
       responses:
         "204":
           description: Logout completed
+        "400":
+          description: Invalid logout request
+  /api/iam/internal/init/realms:
+    post:
+      summary: Bootstrap shared realm for MVP
+      responses:
+        "200":
+          description: Shared realm initialized or already exists
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SharedRealmInitResponse"
+  /api/iam/internal/init/tenants/{tenantId}:
+    post:
+      summary: Provision tenant client in shared realm
+      parameters:
+        - in: path
+          name: tenantId
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TenantProvisionRequest"
+      responses:
+        "200":
+          description: Tenant provisioned in shared realm
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TenantProvisionResponse"
+  /api/iam/client/tenant-realm-configs:
+    post:
+      summary: Upsert tenant realm config (MVP SHARED_REALM only)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TenantRealmConfigRequest"
+      responses:
+        "200":
+          description: Tenant realm config saved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TenantRealmConfigResponse"
+        "400":
+          description: Invalid identity mode for MVP
+  /api/iam/client/realms/tenants/{tenantId}:
+    get:
+      summary: Resolve active realm for tenant
+      parameters:
+        - in: path
+          name: tenantId
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Resolved realm
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RealmResolutionResponse"
+        "400":
+          description: Missing tenant config or invalid tenant id
+components:
+  schemas:
+    LoginRequest:
+      type: object
+      required: [tenantId, username, password]
+      properties:
+        tenantId:
+          type: string
+        username:
+          type: string
+        password:
+          type: string
+        appId:
+          type: string
+    RefreshRequest:
+      type: object
+      required: [tenantId, refreshToken]
+      properties:
+        tenantId:
+          type: string
+        refreshToken:
+          type: string
+    LogoutRequest:
+      type: object
+      required: [tenantId, refreshToken]
+      properties:
+        tenantId:
+          type: string
+        refreshToken:
+          type: string
+    TokenResponse:
+      type: object
+      required: [accessToken, refreshToken, expiresIn, tokenType]
+      properties:
+        accessToken:
+          type: string
+        refreshToken:
+          type: string
+        expiresIn:
+          type: integer
+          format: int64
+        tokenType:
+          type: string
+          example: Bearer
+    SharedRealmInitResponse:
+      type: object
+      properties:
+        realm:
+          type: string
+        status:
+          type: string
+          enum: [INITIALIZED, ALREADY_EXISTS]
+    TenantProvisionRequest:
+      type: object
+      required: [tenantId, tenantName, contactEmail, identityMode]
+      properties:
+        tenantId:
+          type: string
+        tenantName:
+          type: string
+        contactEmail:
+          type: string
+        identityMode:
+          type: string
+          enum: [SHARED_REALM]
+    TenantProvisionResponse:
+      type: object
+      properties:
+        tenantId:
+          type: string
+        realm:
+          type: string
+        keycloakClientId:
+          type: string
+        status:
+          type: string
+          enum: [PROVISIONED, ALREADY_EXISTS]
+    TenantRealmConfigRequest:
+      type: object
+      required: [tenantId, identityMode]
+      properties:
+        tenantId:
+          type: string
+        identityMode:
+          type: string
+          enum: [SHARED_REALM]
+    TenantRealmConfigResponse:
+      type: object
+      properties:
+        tenantId:
+          type: string
+        identityMode:
+          type: string
+          enum: [SHARED_REALM]
+        dedicatedRealmApproved:
+          type: boolean
+          enum: [false]
+    RealmResolutionResponse:
+      type: object
+      properties:
+        tenantId:
+          type: string
+        realm:
+          type: string
+        identityMode:
+          type: string
+          enum: [SHARED_REALM]

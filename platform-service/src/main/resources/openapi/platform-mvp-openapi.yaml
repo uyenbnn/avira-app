@@ -1,0 +1,193 @@
+openapi: 3.0.3
+info:
+  title: Platform Service MVP API
+  version: 1.0.0
+paths:
+  /api/platform/tenants:
+    post:
+      summary: Create tenant (MVP defaults to SHARED_REALM)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TenantRequest"
+      responses:
+        "201":
+          description: Tenant created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TenantResponse"
+    get:
+      summary: List all tenants (platform admin only)
+      parameters:
+        - in: header
+          name: X-Platform-Admin
+          required: true
+          schema:
+            type: boolean
+      responses:
+        "200":
+          description: Tenant list
+  /api/platform/tenants/{tenantId}:
+    get:
+      summary: Get tenant details with ownership check
+      parameters:
+        - in: path
+          name: tenantId
+          required: true
+          schema:
+            type: string
+        - in: header
+          name: X-Tenant-Id
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Tenant details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TenantResponse"
+  /api/platform/tenants/{tenantId}/applications:
+    post:
+      summary: Create application for tenant with ownership check
+      parameters:
+        - in: path
+          name: tenantId
+          required: true
+          schema:
+            type: string
+        - in: header
+          name: X-Tenant-Id
+          required: false
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ApplicationRequest"
+      responses:
+        "201":
+          description: Application created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApplicationResponse"
+    get:
+      summary: List applications for tenant with ownership check
+      parameters:
+        - in: path
+          name: tenantId
+          required: true
+          schema:
+            type: string
+        - in: header
+          name: X-Tenant-Id
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Applications list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ApplicationResponse"
+  /api/platform/tenants/{tenantId}/applications/{appId}:
+    get:
+      summary: Get application by id with ownership check
+      parameters:
+        - in: path
+          name: tenantId
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: appId
+          required: true
+          schema:
+            type: string
+        - in: header
+          name: X-Tenant-Id
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Application details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApplicationResponse"
+components:
+  schemas:
+    TenantRequest:
+      type: object
+      required: [name, contactEmail]
+      properties:
+        name:
+          type: string
+        contactEmail:
+          type: string
+    TenantResponse:
+      type: object
+      properties:
+        tenantId:
+          type: string
+        name:
+          type: string
+        contactEmail:
+          type: string
+        identityMode:
+          type: string
+          enum: [SHARED_REALM]
+        status:
+          type: string
+          enum: [ACTIVE, SUSPENDED, PENDING]
+        createdAt:
+          type: string
+          format: date-time
+    ApplicationRequest:
+      type: object
+      required: [name, domain, authMode]
+      properties:
+        name:
+          type: string
+        domain:
+          type: string
+        authMode:
+          type: string
+          enum: [KEYCLOAK, CUSTOM_JWT, PASSTHROUGH]
+        config:
+          type: object
+          additionalProperties: true
+    ApplicationResponse:
+      type: object
+      properties:
+        appId:
+          type: string
+        tenantId:
+          type: string
+        name:
+          type: string
+        domain:
+          type: string
+        authMode:
+          type: string
+          enum: [KEYCLOAK, CUSTOM_JWT, PASSTHROUGH]
+        status:
+          type: string
+          enum: [ACTIVE, INACTIVE, PROVISIONING]
+        config:
+          type: object
+          additionalProperties: true
+        createdAt:
+          type: string
+          format: date-time

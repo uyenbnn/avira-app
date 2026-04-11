@@ -1,6 +1,29 @@
 # Realm Resolution
 
-This document defines the RealmResolver contract and expected behavior for shared and dedicated tenant identity modes.
+This document defines the RealmResolver contract, MVP realm strategy, and explicit constraints for shared and dedicated tenant identity modes.
+
+---
+
+## MVP Realm Strategy (2026-04-11)
+
+**Active for MVP:** `SHARED_REALM` only.
+
+| Decision | Value |
+|---|---|
+| Default realm | `avira-platform` |
+| Identity mode at tenant creation | `SHARED_REALM` (hardcoded for MVP) |
+| `DEDICATED_REALM` activation | **Out of scope for MVP.** Interface and data model are scaffolded but cannot be activated without explicit approval gate and dedicated-realm provisioning implementation. |
+| Tenant isolation mechanism | `tenant_id` JWT claim + scoped DB queries. NOT by realm. |
+
+### Non-Negotiable MVP Constraints
+
+1. `identityMode` field on `TenantRealmConfig` MUST be set to `SHARED_REALM` for all tenants created in MVP.
+2. `dedicatedRealmApproved = false` MUST be enforced at the API level; the field is not user-settable in MVP.
+3. `RealmResolver.resolveRealm(tenantId)` MUST be used for every Keycloak operation — no hardcoded realm strings anywhere except the default config property.
+4. Realm provisioning (create/delete Keycloak realm) is callable only through `KeycloakRealmProvisioningService` inside `iam-service`. No other service may call Keycloak Admin API.
+5. `application-service` validates tokens against Keycloak JWKS endpoint only; it MUST NOT perform any Keycloak Admin API call.
+
+---
 
 ## Interface Contract
 
@@ -20,12 +43,13 @@ Responsibilities:
 
 ## Behavior by Identity Mode
 
-### SHARED_REALM
+### SHARED_REALM (MVP — only active mode)
 
 - Return shared realm name (default: `avira-platform`).
-- Tenant isolation is still required through tenant claims, ownership checks, and tenant-scoped queries.
+- Tenant isolation is enforced through `tenant_id` JWT claim, ownership checks, and tenant-scoped DB queries.
+- This is the **only mode that may be activated in MVP**.
 
-### DEDICATED_REALM
+### DEDICATED_REALM (post-MVP — scaffolded only)
 
 - Return tenant-specific realm name using configured prefix.
 - Default naming convention: `tenant_<tenantId>`.

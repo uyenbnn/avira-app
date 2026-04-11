@@ -4,5 +4,12 @@ metadata:
   name: iam-service-app-env
 data:
   SPRING_APPLICATION_NAME: iam-service
+  SERVER_PORT: "8080"
+  SPRING_DATASOURCE_URL: jdbc:postgresql://host.docker.internal:5455/iam_service
+  SPRING_DATASOURCE_USERNAME: postgres
+  SPRING_DATASOURCE_PASSWORD: postgres
+  SPRING_JPA_HIBERNATE_DDL_AUTO: update
   IAM_REALM_SHARED_NAME: avira-platform
   IAM_REALM_DEDICATED_PREFIX: tenant_
+  IAM_INIT_KEYCLOAK_BASE_URL: http://host.docker.internal:8080
+  IAM_AUTH_KEYCLOAK_BASE_URL: http://host.docker.internal:8080

@@ -8,5 +8,5 @@ spec:
   ports:
     - name: http
       protocol: TCP
-      port: 10003
-      targetPort: 10003
+      port: 8080
+      targetPort: 8080

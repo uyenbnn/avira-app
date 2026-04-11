@@ -9,21 +9,26 @@ data:
 
     services:
       - name: iam-service
-        url: http://iam-service:10003
+        url: http://iam-service:8080
         routes:
-          - name: iam-service-auth-routes
-            paths:
-              - /api/iam/auth
-            strip_path: false
-          - name: iam-service-init-routes
-            paths:
-              - /api/iam/init
-            strip_path: false
-          - name: iam-service-realms-routes
-            paths:
-              - /api/iam/realms
-            strip_path: false
-          - name: iam-service-users-routes
+          - name: iam-service-routes
             paths:
               - /api/iam/users
+              - /api/iam/client
+              - /api/iam/internal
+              - /api/iam/auth
+            strip_path: false
+      - name: platform-service
+        url: http://platform-service:8080
+        routes:
+          - name: platform-service-routes
+            paths:
+              - /api/platform
+            strip_path: false
+      - name: application-service
+        url: http://application-service:8080
+        routes:
+          - name: application-service-routes
+            paths:
+              - /api/apps
             strip_path: false

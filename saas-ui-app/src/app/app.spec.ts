@@ -1,10 +1,12 @@
 import { TestBed } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
 import { App } from './app';
 
 describe('App', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [App],
+      providers: [provideRouter([])]
     }).compileComponents();
   });
 
@@ -14,19 +16,18 @@ describe('App', () => {
     expect(app).toBeTruthy();
   });
 
-  it('should render control plane title', async () => {
+  it('should render app title', async () => {
     const fixture = TestBed.createComponent(App);
     await fixture.whenStable();
     const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.querySelector('h1')?.textContent).toContain('Avira Control Plane');
+    expect(compiled.textContent).toContain('SaaS MVP UI');
   });
 
-  it('should render quick actions section', async () => {
+  it('should render navigation links', async () => {
     const fixture = TestBed.createComponent(App);
     await fixture.whenStable();
     const compiled = fixture.nativeElement as HTMLElement;
 
-    expect(compiled.querySelector('#quick-actions-title')?.textContent).toContain('Quick actions');
-    expect(compiled.querySelectorAll('.action-item').length).toBe(3);
+    expect(compiled.querySelectorAll('a').length).toBeGreaterThanOrEqual(2);
   });
 });
